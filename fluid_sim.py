@@ -35,10 +35,7 @@ class FluidSimulator:
         self.bc = None
 
         self.p_iter = p_iter
-        self.force_radius = resolution / 2.0
-        self.f_strength = 10.0
         self.g = ti.Vector([0, -9.8])
-        self.dye_decay = 1 - 1.0 / 120.0
 
     def step(self):
         self._set_bc()
@@ -51,56 +48,13 @@ class FluidSimulator:
             self._update_pressures()
             self.p.swap()
 
-        self.to_buffer()
-
-    @ti.kernel
-    def to_buffer(self):
-        for i, j in self.buf.current:
-            self.buf.current[i, j].x = 256.0 * self.v.current[i, j].x
-            self.buf.current[i, j].y = 256.0 * self.v.current[i, j].y
-            self.buf.current[i, j].z = 256.0 * self.p.current[i, j]
+        self._to_buffer()
 
     def set_boundary_condition(self, boundary_condition):
         self.bc = boundary_condition
 
     def get_buffer(self):
         return self.buf.current
-
-    @ti.func
-    def _sample(self, field, i, j):
-        idx = ti.Vector([int(i), int(j)])
-        idx = max(0, min(self._resolution - 1, idx))
-        return field[idx]
-
-    @ti.func
-    def _diff_x(self, field, i, j):
-        return 0.5 * (self._sample(field, i + 1, j) - self._sample(field, i - 1, j))
-
-    @ti.func
-    def _diff_y(self, field, i, j):
-        return 0.5 * (self._sample(field, i, j + 1) - self._sample(field, i, j - 1))
-
-    @ti.func
-    def _diff2_x(self, field, i, j):
-        return (
-            self._sample(field, i + 1, j)
-            - 2.0 * self._sample(field, i, j)
-            + self._sample(field, i - 1, j)
-        )
-
-    @ti.func
-    def _diff2_y(self, field, i, j):
-        return (
-            self._sample(field, i, j + 1)
-            - 2.0 * self._sample(field, i, j)
-            + self._sample(field, i, j - 1)
-        )
-
-    @ti.kernel
-    def _set_bc(self):
-        for i, j in self.v.current:
-            if (self.bc[i, j] >= ti.Vector([0.0, 0.0])).all():
-                self.v.current[i, j] = self.bc[i, j]
 
     @ti.kernel
     def _update_velocities(self):
@@ -134,6 +88,49 @@ class FluidSimulator:
                 + self._diff_y(self.v.current, i, j).y ** 2
                 + 2 * self._diff_y(self.v.current, i, j).x * self._diff_x(self.v.current, i, j).y
             ) * 0.25
+
+    @ti.kernel
+    def _set_bc(self):
+        for i, j in self.v.current:
+            if (self.bc[i, j] >= ti.Vector([0.0, 0.0])).all():
+                self.v.current[i, j] = self.bc[i, j]
+
+    @ti.kernel
+    def _to_buffer(self):
+        for i, j in self.buf.current:
+            self.buf.current[i, j].x = 256.0 * self.v.current[i, j].x
+            self.buf.current[i, j].y = 256.0 * self.v.current[i, j].y
+            self.buf.current[i, j].z = 256.0 * self.p.current[i, j]
+
+    @ti.func
+    def _sample(self, field, i, j):
+        idx = ti.Vector([int(i), int(j)])
+        idx = max(0, min(self._resolution - 1, idx))
+        return field[idx]
+
+    @ti.func
+    def _diff_x(self, field, i, j):
+        return 0.5 * (self._sample(field, i + 1, j) - self._sample(field, i - 1, j))
+
+    @ti.func
+    def _diff_y(self, field, i, j):
+        return 0.5 * (self._sample(field, i, j + 1) - self._sample(field, i, j - 1))
+
+    @ti.func
+    def _diff2_x(self, field, i, j):
+        return (
+            self._sample(field, i + 1, j)
+            - 2.0 * self._sample(field, i, j)
+            + self._sample(field, i - 1, j)
+        )
+
+    @ti.func
+    def _diff2_y(self, field, i, j):
+        return (
+            self._sample(field, i, j + 1)
+            - 2.0 * self._sample(field, i, j)
+            + self._sample(field, i, j - 1)
+        )
 
 
 def create_bc(resolution):
