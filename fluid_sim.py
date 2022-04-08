@@ -2,7 +2,8 @@ import numpy as np
 
 import taichi as ti
 
-ti.init(arch=ti.cuda)
+arch = ti.vulkan if ti._lib.core.with_vulkan() else ti.cuda
+ti.init(arch=arch)
 
 
 class DoubleBuffers:
@@ -22,37 +23,6 @@ class DoubleBuffers:
         self.next.fill(0)
 
 
-class MouseDataGen:
-    def __init__(self, resolution):
-        self.prev_mouse = None
-        self.prev_color = None
-
-        self.resolution = resolution
-
-    def __call__(self, window):
-        # [0:2]: normalized delta direction
-        # [2:4]: current mouse xy
-        # [4:7]: color
-        mouse_data = np.zeros(8, dtype=np.float32)
-        if window.is_pressed(ti.ui.LMB):
-            mxy = np.array(window.get_cursor_pos(), dtype=np.float32) * self.resolution
-            if self.prev_mouse is None:
-                self.prev_mouse = mxy
-                # Set lower bound to 0.3 to prevent too dark colors
-                self.prev_color = (np.random.rand(3) * 0.7) + 0.3
-            else:
-                mdir = mxy - self.prev_mouse
-                mdir = mdir / (np.linalg.norm(mdir) + 1e-5)
-                mouse_data[0], mouse_data[1] = mdir[0], mdir[1]
-                mouse_data[2], mouse_data[3] = mxy[0], mxy[1]
-                mouse_data[4:7] = self.prev_color
-                self.prev_mouse = mxy
-        else:
-            self.prev_mouse = None
-            self.prev_color = None
-        return mouse_data
-
-
 @ti.data_oriented
 class FluidSimulator:
     def __init__(self, resolution, dt=0.03, Re=1.54, p_iter=50):
@@ -70,16 +40,13 @@ class FluidSimulator:
         self.g = ti.Vector([0, -9.8])
         self.dye_decay = 1 - 1.0 / 120.0
 
-    def step(self, mouse_data: ti.ext_arr()):
+    def step(self):
         self._set_bc()
         self._update_velocities()
-        # self._update_buffer()
 
         self.v.swap()
         self._set_bc()
-        # self.buf.swap()
 
-        # self._apply_impulse(mouse_data)
         for _ in range(self.p_iter):
             self._update_pressures()
             self.p.swap()
@@ -96,32 +63,6 @@ class FluidSimulator:
     def set_boundary_condition(self, boundary_condition):
         self.bc = boundary_condition
 
-    # @ti.kernel
-    # def _apply_impulse(self, imp_data: ti.ext_arr()):
-    #     g_dir = self.g * 300
-    #     for i, j in self.v.current:
-    #         omx, omy = imp_data[2], imp_data[3]
-    #         mdir = ti.Vector([imp_data[0], imp_data[1]])
-    #         dx, dy = (i + 0.5 - omx), (j + 0.5 - omy)
-    #         d2 = dx * dx + dy * dy
-    #         # dv = F * dt
-    #         factor = ti.exp(-d2 / self.force_radius)
-
-    #         dc = self.buf.current[i, j]
-    #         a = dc.norm()
-
-    #         momentum = (mdir * self.f_strength * factor + g_dir * a / (1 + a)) * self.dt
-
-    #         v = self.v.current[i, j]
-    #         self.v.current[i, j] = v + momentum
-    #         # add dye
-    #         if mdir.norm() > 0.5:
-    #             dc += ti.exp(-d2 * (4 / (self._resolution / 15) ** 2)) * ti.Vector(
-    #                 [imp_data[4], imp_data[5], imp_data[6]]
-    #             )
-
-    #         self.buf.current[i, j] = dc
-
     def get_buffer(self):
         return self.buf.current
 
@@ -130,36 +71,6 @@ class FluidSimulator:
         idx = ti.Vector([int(i), int(j)])
         idx = max(0, min(self._resolution - 1, idx))
         return field[idx]
-
-    # @ti.func
-    # def _lerp(self, p, q, t):
-    #     # t: [0.0, 1.0]
-    #     return p + t * (q - p)
-
-    # @ti.func
-    # def _bilerp(self, field, p):
-    #     u, v = p
-    #     s, t = u - 0.5, v - 0.5
-    #     # floor
-    #     iu, iv = ti.floor(s), ti.floor(t)
-    #     # fract
-    #     fu, fv = s - iu, t - iv
-    #     a = self._sample(field, iu, iv)
-    #     b = self._sample(field, iu + 1, iv)
-    #     c = self._sample(field, iu, iv + 1)
-    #     d = self._sample(field, iu + 1, iv + 1)
-    #     return self._lerp(self._lerp(a, b, fu), self._lerp(c, d, fu), fv)
-
-    # # 3rd order Runge-Kutta
-    # @ti.func
-    # def _backtrace(self, vf: ti.template(), p):
-    #     v1 = self._bilerp(vf, p)
-    #     p1 = p - 0.5 * self.dt * v1
-    #     v2 = self._bilerp(vf, p1)
-    #     p2 = p - 0.75 * self.dt * v2
-    #     v3 = self._bilerp(vf, p2)
-    #     p -= self.dt * ((2 / 9) * v1 + (1 / 3) * v2 + (4 / 9) * v3)
-    #     return p
 
     @ti.func
     def _diff_x(self, field, i, j):
@@ -206,13 +117,6 @@ class FluidSimulator:
                 + (self._diff2_x(self.v.current, i, j) + self._diff2_y(self.v.current, i, j))
                 / self.Re
             )
-
-    # @ti.kernel
-    # def _update_buffer(self):
-    #     for i, j in self.buf.next:
-    #         p = ti.Vector([i, j])
-    #         p = self._backtrace(self.v.current, p)
-    #         self.buf.next[i, j] = self._bilerp(self.buf.current, p) * self.dye_decay
 
     @ti.kernel
     def _update_pressures(self):
@@ -263,7 +167,6 @@ def main():
 
     window = ti.ui.Window("Fluid Simulation", (resolution, resolution), vsync=True)
     canvas = window.get_canvas()
-    md_gen = MouseDataGen(resolution)
 
     fluid_sim = FluidSimulator(resolution)
     bc = create_bc(resolution)
@@ -280,9 +183,7 @@ def main():
                 debug = not debug
 
         if not paused:
-            mouse_data = md_gen(window)
-            fluid_sim.step(mouse_data)
-            print(mouse_data)
+            fluid_sim.step()
 
         canvas.set_image(fluid_sim.get_buffer())
         window.show()
