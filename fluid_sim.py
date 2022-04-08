@@ -40,9 +40,9 @@ class FluidSimulator:
     def step(self):
         self._set_bc()
         self._update_velocities()
+        print(self.v.current[1, 100])
 
         self.v.swap()
-        self._set_bc()
 
         for _ in range(self.p_iter):
             self._update_pressures()
@@ -94,6 +94,7 @@ class FluidSimulator:
         for i, j in self.v.current:
             if (self.bc[i, j] >= ti.Vector([0.0, 0.0])).all():
                 self.v.current[i, j] = self.bc[i, j]
+                self.v.next[i, j] = self.bc[i, j]
 
     @ti.kernel
     def _to_buffer(self):
@@ -137,8 +138,8 @@ def create_bc(resolution):
     bc = -np.ones((resolution, resolution, 2))
 
     # 流入部、流出部の設定
-    bc[0, :] = np.array([100.0, 0.0])
-    bc[-1, :] = np.array([100.0, 0.0])
+    bc[0, :] = np.array([1.0, 0.0])
+    bc[-1, :] = np.array([1.0, 0.0])
 
     # 壁の設定
     bc[:, 0] = np.array([0.0, 0.0])
