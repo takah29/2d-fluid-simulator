@@ -26,7 +26,7 @@ class DoubleBuffers:
 
 @ti.data_oriented
 class FluidSimulator:
-    def __init__(self, resolution, dt=0.01, Re=5.54, p_iter=50):
+    def __init__(self, resolution, dt=0.01, Re=5.54, p_iter=2):
         self._resolution = resolution
         self.dt = dt
         self.Re = Re
@@ -36,7 +36,6 @@ class FluidSimulator:
         self.bc = None
 
         self.p_iter = p_iter
-        self.g = ti.Vector([0, -9.8])
 
         self.v.current.fill(ti.Vector([0.4, 0.0]))
 
@@ -100,10 +99,9 @@ class FluidSimulator:
     @ti.kernel
     def _to_buffer(self, bufc: ti.template(), vc: ti.template(), pc: ti.template()):
         for i, j in bufc:
-            # bufc[i,j] = self._to_rgb(vc[i,j])
-            bufc[i, j].x = ti.abs(vc[i, j].y)
-            bufc[i, j].y = 0.0001 * pc[i, j]
-            bufc[i, j].z = ti.abs(vc[i, j].x)
+            c = 0.15 * ti.sqrt(vc[i, j].dot(vc[i, j]))
+            # c = 0.015 * pc[i, j]
+            bufc[i, j] = ti.Vector([c, c, c])
 
     @ti.func
     def _sample(self, field, i, j):
@@ -207,7 +205,7 @@ def main():
     bc = create_bc(resolution)
     fluid_sim.set_boundary_condition(bc)
 
-    video_manager = ti.VideoManager(output_dir="result", framerate=30, automatic_build=False)
+    video_manager = ti.tools.VideoManager(output_dir="result", framerate=30, automatic_build=False)
 
     count = 0
     while window.running:
@@ -227,12 +225,12 @@ def main():
         canvas.set_image(img)
         window.show()
 
-        # if count % 100 == 0:
-        #     video_manager.write_frame(img)
+        if count % 200 == 0:
+            video_manager.write_frame(img)
 
         count += 1
 
-    # video_manager.make_video(mp4=True)
+    video_manager.make_video(mp4=True)
 
 
 if __name__ == "__main__":
