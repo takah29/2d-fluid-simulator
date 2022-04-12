@@ -1,7 +1,7 @@
 import taichi as ti
 
 from visualize import norm_visualize
-from boundary_condition import BoundaryCondition1
+from boundary_condition import BoundaryCondition1, BoundaryCondition2
 
 
 class DoubleBuffers:
@@ -23,7 +23,7 @@ class DoubleBuffers:
 
 @ti.data_oriented
 class FluidSimulator:
-    def __init__(self, resolution, dt=0.01, Re=5.54, p_iter=2):
+    def __init__(self, resolution, dt=0.01, Re=1.0, p_iter=2):
         self._resolution = resolution
         self.dt = dt
         self.Re = Re
@@ -138,7 +138,7 @@ def main():
     canvas = window.get_canvas()
 
     fluid_sim = FluidSimulator(resolution)
-    bc = BoundaryCondition1(resolution)
+    bc = BoundaryCondition2(resolution)
     fluid_sim.set_boundary_condition(bc)
 
     video_manager = ti.tools.VideoManager(output_dir="result", framerate=30, automatic_build=False)
