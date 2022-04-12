@@ -90,6 +90,10 @@ class FluidSimulator:
     def _to_buffer(self, bufc: ti.template(), vc: ti.template(), pc: ti.template()):
         for i, j in bufc:
             bufc[i, j] = norm_visualize(vc[i, j])
+            if self.bc.bc_mask[i, j] == 1:
+                bufc[i, j].x = 0.5
+                bufc[i, j].y = 0.5
+                bufc[i, j].z = 0.7
 
     @ti.func
     def _sample(self, field, i, j):
