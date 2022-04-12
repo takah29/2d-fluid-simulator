@@ -4,7 +4,7 @@ import taichi as ti
 
 @ti.func
 def norm_visualize(vec):
-    c = 0.15 * ti.sqrt(vec.dot(vec))
+    c = ti.sqrt(vec.dot(vec))
     return ti.Vector([c, c, c])
 
 

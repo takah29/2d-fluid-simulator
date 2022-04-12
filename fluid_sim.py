@@ -1,6 +1,6 @@
 import taichi as ti
 
-from visualize import norm_visualize
+from visualize import norm_visualize, hue_visualize
 from boundary_condition import BoundaryCondition1, BoundaryCondition2
 
 
@@ -23,7 +23,7 @@ class DoubleBuffers:
 
 @ti.data_oriented
 class FluidSimulator:
-    def __init__(self, resolution, dt=0.01, Re=1.0, p_iter=2):
+    def __init__(self, resolution, dt=0.01, Re=5.54, p_iter=10):
         self._resolution = resolution
         self.dt = dt
         self.Re = Re
@@ -59,8 +59,7 @@ class FluidSimulator:
     def _update_velocities(self, vc: ti.template(), vn: ti.template(), pc: ti.template()):
         for i, j in vn:
             vn[i, j] = vc[i, j] + self.dt * (
-                -vc[i, j].x * self._diff_x(vc, i, j)
-                - vc[i, j].y * self._diff_y(vc, i, j)
+                -self._advect_kk_scheme(vc, i, j)
                 - ti.Vector(
                     [
                         self._diff_x(pc, i, j),
@@ -89,11 +88,74 @@ class FluidSimulator:
     @ti.kernel
     def _to_buffer(self, bufc: ti.template(), vc: ti.template(), pc: ti.template()):
         for i, j in bufc:
-            bufc[i, j] = norm_visualize(vc[i, j])
+            bufc[i, j] = 0.15 * norm_visualize(vc[i, j])
             if self.bc.bc_mask[i, j] == 1:
                 bufc[i, j].x = 0.5
                 bufc[i, j].y = 0.5
                 bufc[i, j].z = 0.7
+
+    @ti.func
+    def _advect(self, field, i, j):
+        return field[i, j].x * self._diff_x(field, i, j) + field[i, j].y * self._diff_y(field, i, j)
+
+    @ti.func
+    def _advect_kk_scheme(self, field, i, j):
+        """Kawamura-Kuwabara Scheme
+
+        http://www.slis.tsukuba.ac.jp/~fujisawa.makoto.fu/cgi-bin/wiki/index.php?%B0%DC%CE%AE%CB%A1#y2dbc484
+        """
+        a = b = ti.Vector([0.0, 0.0])
+        if field[i, j].x < 0:
+            a = (
+                field[i, j].x
+                * (
+                    -2 * self._sample(field, i + 2, j)
+                    + 10 * self._sample(field, i + 1, j)
+                    - 9 * self._sample(field, i, j)
+                    + 2 * self._sample(field, i - 1, j)
+                    - self._sample(field, i - 2, j)
+                )
+                / 6
+            )
+        else:
+            a = (
+                field[i, j].x
+                * (
+                    self._sample(field, i + 2, j)
+                    - 2 * self._sample(field, i + 1, j)
+                    + 9 * self._sample(field, i, j)
+                    - 10 * self._sample(field, i - 1, j)
+                    + 2 * self._sample(field, i - 2, j)
+                )
+                / 6
+            )
+
+        if field[i, j].y < 0:
+            b = (
+                field[i, j].y
+                * (
+                    -2 * self._sample(field, i, j + 2)
+                    + 10 * self._sample(field, i, j + 1)
+                    - 9 * self._sample(field, i, j)
+                    + 2 * self._sample(field, i, j - 1)
+                    - self._sample(field, i, j - 2)
+                )
+                / 6
+            )
+        else:
+            b = (
+                field[i, j].y
+                * (
+                    self._sample(field, i, j + 2)
+                    - 2 * self._sample(field, i, j + 1)
+                    + 9 * self._sample(field, i, j)
+                    - 10 * self._sample(field, i, j - 1)
+                    + 2 * self._sample(field, i, j - 2)
+                )
+                / 6
+            )
+
+        return a + b
 
     @ti.func
     def _sample(self, field, i, j):
@@ -138,7 +200,7 @@ def main():
     canvas = window.get_canvas()
 
     fluid_sim = FluidSimulator(resolution)
-    bc = BoundaryCondition2(resolution)
+    bc = BoundaryCondition1(resolution)
     fluid_sim.set_boundary_condition(bc)
 
     video_manager = ti.tools.VideoManager(output_dir="result", framerate=30, automatic_build=False)
@@ -159,12 +221,12 @@ def main():
         canvas.set_image(img)
         window.show()
 
-        # if count % 200 == 0:
-        #     video_manager.write_frame(img)
+        if count % 200 == 0:
+            video_manager.write_frame(img)
 
         count += 1
 
-    # video_manager.make_video(mp4=True)
+    video_manager.make_video(mp4=True)
 
 
 if __name__ == "__main__":
