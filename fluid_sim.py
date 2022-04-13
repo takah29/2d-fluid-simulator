@@ -1,7 +1,7 @@
 import taichi as ti
 
 from visualize import norm_visualize, hue_visualize
-from boundary_condition import BoundaryCondition1, BoundaryCondition2
+from boundary_condition import BoundaryCondition1, BoundaryCondition2, BoundaryCondition3
 
 
 class DoubleBuffers:
@@ -23,7 +23,7 @@ class DoubleBuffers:
 
 @ti.data_oriented
 class FluidSimulator:
-    def __init__(self, resolution, dt=0.01, Re=5.54, p_iter=10):
+    def __init__(self, resolution, dt=0.01, Re=1000.0, p_iter=5):
         self._resolution = resolution
         self.dt = dt
         self.Re = Re
@@ -88,7 +88,7 @@ class FluidSimulator:
     @ti.kernel
     def _to_buffer(self, bufc: ti.template(), vc: ti.template(), pc: ti.template()):
         for i, j in bufc:
-            bufc[i, j] = 0.15 * norm_visualize(vc[i, j])
+            bufc[i, j] = 0.05 * norm_visualize(vc[i, j])
             if self.bc.bc_mask[i, j] == 1:
                 bufc[i, j].x = 0.5
                 bufc[i, j].y = 0.5
@@ -193,14 +193,14 @@ def main():
     arch = ti.vulkan if ti._lib.core.with_vulkan() else ti.cuda
     ti.init(arch=arch)
 
-    resolution = 500
+    resolution = 400
     paused = False
 
     window = ti.ui.Window("Fluid Simulation", (2 * resolution, resolution), vsync=False)
     canvas = window.get_canvas()
 
     fluid_sim = FluidSimulator(resolution)
-    bc = BoundaryCondition1(resolution)
+    bc = BoundaryCondition3(resolution)
     fluid_sim.set_boundary_condition(bc)
 
     video_manager = ti.tools.VideoManager(output_dir="result", framerate=30, automatic_build=False)
@@ -221,12 +221,12 @@ def main():
         canvas.set_image(img)
         window.show()
 
-        if count % 200 == 0:
-            video_manager.write_frame(img)
+        # if count % 50 == 0:
+        #     video_manager.write_frame(img)
 
         count += 1
 
-    video_manager.make_video(mp4=True)
+    # video_manager.make_video(mp4=True)
 
 
 if __name__ == "__main__":
