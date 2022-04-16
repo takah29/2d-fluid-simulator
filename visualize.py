@@ -3,38 +3,13 @@ import taichi as ti
 
 
 @ti.func
-def norm_visualize(vec):
+def visualize_norm(vec):
     c = ti.sqrt(vec.dot(vec))
     return ti.Vector([c, c, c])
 
 
 @ti.func
-def wave_visualize(vec):
-    h = 0.7
-
-    m = ti.sqrt(vec.x**2 + vec.y**2)
-    ranges = 0
-    rangee = 1
-
-    while m > rangee:
-        ranges = rangee
-        rangee *= e
-
-    k = (m - ranges) / (rangee - ranges)
-    s = k * 2 if k < 0.5 else 1 - (k - 0.5) * 2
-    s = 1 - pow(1 - s, 3)
-    s = 0.4 + s * 0.6
-
-    v = k * 2 if k < 0.5 else 1 - (k - 0.5) * 2
-    v = 1 - v
-    v = 1 - pow(1 - v, 3)
-    v = 0.6 + v * 0.4
-
-    return _hsv_to_rgb(h, s, v)
-
-
-@ti.func
-def hue_visualize(vec):
+def visualize_hue(vec):
     h = ti.atan2(vec.y, vec.x)
 
     while h < 0:

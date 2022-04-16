@@ -13,14 +13,41 @@ def to_field(bc, bc_mask):
     return bc_field, bc_mask_field
 
 
+@ti.func
+def set_const_bc(vc, bc_const, bc_mask, i, j):
+    if bc_mask[i, j] > 0:
+        vc[i, j] = bc_const[i, j]
+
+
+@ti.func
+def set_wall_bc(vc, pc, bc_mask, i, j):
+    """壁の境界条件を設定する"""
+    if bc_mask[i - 1, j] == 0 and bc_mask[i, j] == 1 and bc_mask[i + 1, j] == 1:
+        vc[i, j].x == 0.0
+        vc[i + 1, j].x = vc[i - 1, j].x
+        pc[i, j] = pc[i - 1, j]
+    elif bc_mask[i - 1, j] == 1 and bc_mask[i, j] == 1 and bc_mask[i + 1, j] == 0:
+        vc[i, j].x == 0.0
+        vc[i - 1, j].x = vc[i + 1, j].x
+        pc[i, j] = pc[i + 1, j]
+    elif bc_mask[i, j - 1] == 0 and bc_mask[i, j] == 1 and bc_mask[i, j + 1] == 1:
+        vc[i, j].y == 0.0
+        vc[i, j + 1].y = vc[i, j - 1].y
+        pc[i, j] = pc[i, j - 1]
+    elif bc_mask[i, j - 1] == 1 and bc_mask[i, j] == 1 and bc_mask[i, j + 1] == 0:
+        vc[i, j].y == 0.0
+        vc[i, j - 1].y = vc[i, j + 1].y
+        pc[i, j] = pc[i, j + 1]
+
+
 @ti.data_oriented
 class BoundaryCondition1:
     def __init__(self, resolution):
-        self._resolution = resolution
-        self._const_bc, self.bc_mask = BoundaryCondition1._set_const_bc(resolution)
+        self.resolution = resolution
+        self._bc_const, self._bc_mask = BoundaryCondition1._create_bc(resolution)
 
     @staticmethod
-    def _set_const_bc(resolution):
+    def _create_bc(resolution):
         bc = np.zeros((2 * resolution, resolution, 2))
         # 1: 壁, 2: 定常流
         bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint8)
@@ -49,22 +76,27 @@ class BoundaryCondition1:
         return to_field(bc, bc_mask)
 
     @ti.kernel
-    def calc(self, vc: ti.template()):
+    def calc(self, vc: ti.template(), pc: ti.template()):
+        bc_const, bc_mask = ti.static(self._bc_const, self._bc_mask)
         for i, j in vc:
-            if self.bc_mask[i, j] > 0:
-                vc[i, j] = self._const_bc[i, j]
-            if i == (2 * self._resolution - 1) and 0 <= j < self._resolution:
+            set_const_bc(vc, bc_const, bc_mask, i, j)
+            set_wall_bc(vc, pc, bc_mask, i, j)
+            if i == (2 * self.resolution - 1) and 0 <= j < self.resolution:
                 vc[i, j] = ti.Vector([ti.min(ti.max(vc[i - 1, j].x, 0.0), 10.0), vc[i - 1, j].y])
+
+    @ti.func
+    def is_wall(self, i, j):
+        return self._bc_mask[i, j] == 1
 
 
 @ti.data_oriented
 class BoundaryCondition2:
     def __init__(self, resolution):
-        self._resolution = resolution
-        self._const_bc, self.bc_mask = BoundaryCondition2._set_const_bc(resolution)
+        self.resolution = resolution
+        self._bc_const, self._bc_mask = BoundaryCondition2._create_bc(resolution)
 
     @staticmethod
-    def _set_const_bc(resolution):
+    def _create_bc(resolution):
         bc = np.zeros((2 * resolution, resolution, 2))
         bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint8)
 
@@ -96,33 +128,38 @@ class BoundaryCondition2:
 
         # 流入部、流出部の設定
         y_point = resolution // 6
-        bc[0, 2 * y_point : 4 * y_point] = np.array([4.0, 0.0])
+        bc[0, 2 * y_point : 4 * y_point] = np.array([6.0, 0.0])
         bc_mask[0, 2 * y_point : 4 * y_point] = 2
-        bc[-1, 2 * y_point : 4 * y_point] = np.array([4.0, 0.0])
+        bc[-1, 2 * y_point : 4 * y_point] = np.array([6.0, 0.0])
         bc_mask[-1, 2 * y_point : 4 * y_point] = 2
 
         return to_field(bc, bc_mask)
 
     @ti.kernel
-    def calc(self, vc: ti.template()):
+    def calc(self, vc: ti.template(), pc: ti.template()):
+        bc_const, bc_mask = ti.static(self._bc_const, self._bc_mask)
         for i, j in vc:
-            if self.bc_mask[i, j] > 0:
-                vc[i, j] = self._const_bc[i, j]
+            set_const_bc(vc, bc_const, bc_mask, i, j)
+            set_wall_bc(vc, pc, bc_mask, i, j)
             if (
-                i == (2 * self._resolution - 1)
-                and 2 * self._resolution // 6 <= j < 4 * self._resolution // 6
+                i == (2 * self.resolution - 1)
+                and 2 * self.resolution // 6 <= j < 4 * self.resolution // 6
             ):
                 vc[i, j] = ti.Vector([ti.min(ti.max(vc[i - 1, j].x, 0.0), 10.0), vc[i - 1, j].y])
+
+    @ti.func
+    def is_wall(self, i, j):
+        return self._bc_mask[i, j] == 1
 
 
 @ti.data_oriented
 class BoundaryCondition3:
     def __init__(self, resolution):
-        self._resolution = resolution
-        self._const_bc, self.bc_mask = BoundaryCondition3._set_const_bc(resolution)
+        self.resolution = resolution
+        self._bc_const, self._bc_mask = BoundaryCondition3._create_bc(resolution)
 
     @staticmethod
-    def _set_const_bc(resolution):
+    def _create_bc(resolution):
         bc = np.zeros((2 * resolution, resolution, 2))
         bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint8)
 
@@ -157,10 +194,14 @@ class BoundaryCondition3:
         return to_field(bc, bc_mask)
 
     @ti.kernel
-    def calc(self, vc: ti.template()):
+    def calc(self, vc: ti.template(), pc: ti.template()):
+        bc_const, bc_mask = ti.static(self._bc_const, self._bc_mask)
         for i, j in vc:
-            if self.bc_mask[i, j] > 0:
-                vc[i, j] = self._const_bc[i, j]
-            if i == (2 * self._resolution - 1) and 2 <= j < self._resolution - 2:
-                # 安定のために逆流しないようにする、かつ流速に上限をつける
-                vc[i, j] = ti.Vector([ti.min(ti.max(vc[i - 1, j].x, 0.0), 10.0), vc[i - 1, j].y])
+            set_const_bc(vc, bc_const, bc_mask, i, j)
+            set_wall_bc(vc, pc, bc_mask, i, j)
+            if i == (2 * self.resolution - 1) and 2 <= j < self.resolution - 2:
+                vc[i, j] = bc_const[i, j]
+
+    @ti.func
+    def is_wall(self, i, j):
+        return self._bc_mask[i, j] == 1
