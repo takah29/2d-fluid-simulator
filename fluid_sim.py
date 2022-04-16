@@ -1,17 +1,17 @@
 import taichi as ti
 
-from visualize import visualize_norm, visualize_hue
+from visualize import visualize_norm, visualize_xy, visualize_hue
 from boundary_condition import BoundaryCondition1, BoundaryCondition2, BoundaryCondition3
 
 
 class DoubleBuffers:
     def __init__(self, resolution, n_channel):
         if n_channel == 1:
-            self.current = ti.field(float, shape=(2 * resolution, resolution))
-            self.next = ti.field(float, shape=(2 * resolution, resolution))
+            self.current = ti.field(float, shape=resolution)
+            self.next = ti.field(float, shape=resolution)
         else:
-            self.current = ti.Vector.field(n_channel, float, shape=(2 * resolution, resolution))
-            self.next = ti.Vector.field(n_channel, float, shape=(2 * resolution, resolution))
+            self.current = ti.Vector.field(n_channel, float, shape=resolution)
+            self.next = ti.Vector.field(n_channel, float, shape=resolution)
 
     def swap(self):
         self.current, self.next = self.next, self.current
@@ -23,16 +23,14 @@ class DoubleBuffers:
 
 @ti.data_oriented
 class FluidSimulator:
-    def __init__(self, boundary_condition, dt=0.01, Re=10000.0, p_iter=5):
+    def __init__(self, boundary_condition, dt, Re, p_iter=5):
         self.bc = boundary_condition
-        self._resolution = boundary_condition.resolution
+        self._resolution = boundary_condition.get_resolution()
         self.dt = dt
         self.Re = Re
         self.v = DoubleBuffers(self._resolution, 2)  # velocities
         self.p = DoubleBuffers(self._resolution, 1)  # pressure
-        self.rgb_buf = ti.Vector.field(
-            3, float, shape=(2 * self._resolution, self._resolution)
-        )  # image buffer
+        self.rgb_buf = ti.Vector.field(3, float, shape=self._resolution)  # image buffer
 
         self.p_iter = p_iter
 
@@ -45,6 +43,7 @@ class FluidSimulator:
         self._update_velocities(self.v.current, self.v.next, self.p.current)
         self.v.swap()
 
+        self.bc.calc(self.v.current, self.p.current)
         for _ in range(self.p_iter):
             self._update_pressures(self.p.current, self.p.next, self.v.current)
             self.p.swap()
@@ -161,8 +160,8 @@ class FluidSimulator:
 
     @ti.func
     def _sample(self, field, i, j):
-        i = max(0, min(2 * self._resolution - 1, i))
-        j = max(0, min(self._resolution - 1, j))
+        i = max(0, min(self._resolution[0] - 1, i))
+        j = max(0, min(self._resolution[1] - 1, j))
         idx = ti.Vector([int(i), int(j)])
         return field[idx]
 
@@ -202,9 +201,9 @@ def main():
     canvas = window.get_canvas()
 
     bc = BoundaryCondition3(resolution)
-    fluid_sim = FluidSimulator(bc)
+    fluid_sim = FluidSimulator(bc, 0.01, 1000.0, 2)
 
-    video_manager = ti.tools.VideoManager(output_dir="result", framerate=30, automatic_build=False)
+    # video_manager = ti.tools.VideoManager(output_dir="result", framerate=60, automatic_build=False)
 
     count = 0
     while window.running:

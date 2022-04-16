@@ -6,15 +6,15 @@ import taichi as ti
 class BaseBoundaryCondition:
     def __init__(self, resolution):
         self.resolution = resolution
-        self._create_bc(resolution)
+        self._bc_const, self._bc_mask = self._create_bc(resolution)
 
     @ti.kernel
     def calc(self, vc: ti.template(), pc: ti.template()):
         bc_const, bc_mask = ti.static(self._bc_const, self._bc_mask)
         for i, j in vc:
             self._set_wall_bc(vc, bc_const, bc_mask, i, j)
-            self._set_inflow_bc(vc, pc, bc_const, bc_mask, i, j)
-            self._set_outflow_bc(vc, pc, bc_const, bc_mask, i, j)
+            self._set_inflow_bc(vc, bc_const, bc_mask, i, j)
+            self._set_outflow_bc(vc, pc, bc_mask, i, j)
             if 0 < i < vc.shape[0] and 0 < j < vc.shape[1]:
                 self._set_inside_wall_bc(vc, pc, bc_mask, i, j)
 
@@ -22,18 +22,21 @@ class BaseBoundaryCondition:
     def is_wall(self, i, j):
         return self._bc_mask[i, j] == 1
 
+    def get_resolution(self):
+        return self._bc_const.shape[:2]
+
     @ti.func
     def _set_wall_bc(self, vc, bc_const, bc_mask, i, j):
         if bc_mask[i, j] == 1:
             vc[i, j] = bc_const[i, j]
 
     @ti.func
-    def _set_inflow_bc(self, vc, pc, bc_const, bc_mask, i, j):
+    def _set_inflow_bc(self, vc, bc_const, bc_mask, i, j):
         if bc_mask[i, j] == 2:
             vc[i, j] = bc_const[i, j]
 
     @ti.func
-    def _set_outflow_bc(self, vc, pc, bc_const, bc_mask, i, j):
+    def _set_outflow_bc(self, vc, pc, bc_mask, i, j):
         if bc_mask[i, j] == 3:
             vc[i, j].x = min(max(vc[i - 1, j].x, 0.0), 10.0)  # 逆流しないようにする
             vc[i, j].y = vc[i - 1, j].y
@@ -105,7 +108,7 @@ class BoundaryCondition1(BaseBoundaryCondition):
         r = resolution // 18
         BaseBoundaryCondition._set_circle(bc, bc_mask, resolution // 2 - r, resolution // 2, r)
 
-        self._bc_const, self._bc_mask = BaseBoundaryCondition._to_field(bc, bc_mask)
+        return BaseBoundaryCondition._to_field(bc, bc_mask)
 
 
 @ti.data_oriented
@@ -149,7 +152,7 @@ class BoundaryCondition2(BaseBoundaryCondition):
         bc[-2:, 2 * y_point : 4 * y_point] = np.array([6.0, 0.0])
         bc_mask[-2:, 2 * y_point : 4 * y_point] = 3
 
-        self._bc_const, self._bc_mask = BaseBoundaryCondition._to_field(bc, bc_mask)
+        return BaseBoundaryCondition._to_field(bc, bc_mask)
 
 
 @ti.data_oriented
@@ -167,8 +170,8 @@ class BoundaryCondition3(BaseBoundaryCondition):
         bc_mask[-1, :] = 3
 
         # 壁の設定
-        bc[:, 0:2] = np.array([0.0, 0.0])
-        bc_mask[:, 0:2] = 1
+        bc[:, :2] = np.array([0.0, 0.0])
+        bc_mask[:, :2] = 1
         bc[:, -2:] = np.array([0.0, 0.0])
         bc_mask[:, -2:] = 1
 
@@ -181,4 +184,4 @@ class BoundaryCondition3(BaseBoundaryCondition):
         for p in points:
             BaseBoundaryCondition._set_circle(bc, bc_mask, p[0], p[1], r)
 
-        self._bc_const, self._bc_mask = BaseBoundaryCondition._to_field(bc, bc_mask)
+        return BaseBoundaryCondition._to_field(bc, bc_mask)
