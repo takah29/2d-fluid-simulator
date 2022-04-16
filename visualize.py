@@ -36,6 +36,10 @@ def visualize_hue(vec):
 
     return _hsv_to_rgb(h, s, v)
 
+@ti.func
+def visualize_xy(vec):
+    return ti.Vector([vec.y, 0.0, vec.x])
+
 
 @ti.func
 def _hsv_to_rgb(h: float, s: float, v: float):
