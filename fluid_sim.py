@@ -100,6 +100,28 @@ class FluidSimulator:
         return vc[i, j].x * self._diff_x(vc, i, j) + vc[i, j].y * self._diff_y(vc, i, j)
 
     @ti.func
+    def _advect_upwind(self, vc, i, j):
+        """Upwind differencing
+
+        http://www.slis.tsukuba.ac.jp/~fujisawa.makoto.fu/cgi-bin/wiki/index.php?%B0%DC%CE%AE%CB%A1#tac8e468
+        """
+        k = 0
+        if vc[i, j].x < 0.0:
+            k = i
+        else:
+            k = i - 1
+        a = vc[i, j].x * (self._sample(vc, k + 1, j) - self._sample(vc, k, j))
+
+        if vc[i, j].y < 0.0:
+            k = j
+        else:
+            k = j - 1
+
+        b = vc[i, j].y * (self._sample(vc, i, k + 1) - self._sample(vc, i, k))
+
+        return a + b
+
+    @ti.func
     def _advect_kk_scheme(self, vc, i, j):
         """Kawamura-Kuwabara Scheme
 
