@@ -96,62 +96,62 @@ class FluidSimulator:
                 rgb_buf[i, j].z = 0.7
 
     @ti.func
-    def _advect(self, field, i, j):
-        return field[i, j].x * self._diff_x(field, i, j) + field[i, j].y * self._diff_y(field, i, j)
+    def _advect(self, vc, i, j):
+        return vc[i, j].x * self._diff_x(vc, i, j) + vc[i, j].y * self._diff_y(vc, i, j)
 
     @ti.func
-    def _advect_kk_scheme(self, field, i, j):
+    def _advect_kk_scheme(self, vc, i, j):
         """Kawamura-Kuwabara Scheme
 
         http://www.slis.tsukuba.ac.jp/~fujisawa.makoto.fu/cgi-bin/wiki/index.php?%B0%DC%CE%AE%CB%A1#y2dbc484
         """
         a = b = ti.Vector([0.0, 0.0])
-        if field[i, j].x < 0:
+        if vc[i, j].x < 0:
             a = (
-                field[i, j].x
+                vc[i, j].x
                 * (
-                    -2 * self._sample(field, i + 2, j)
-                    + 10 * self._sample(field, i + 1, j)
-                    - 9 * self._sample(field, i, j)
-                    + 2 * self._sample(field, i - 1, j)
-                    - self._sample(field, i - 2, j)
+                    -2 * self._sample(vc, i + 2, j)
+                    + 10 * self._sample(vc, i + 1, j)
+                    - 9 * self._sample(vc, i, j)
+                    + 2 * self._sample(vc, i - 1, j)
+                    - self._sample(vc, i - 2, j)
                 )
                 / 6
             )
         else:
             a = (
-                field[i, j].x
+                vc[i, j].x
                 * (
-                    self._sample(field, i + 2, j)
-                    - 2 * self._sample(field, i + 1, j)
-                    + 9 * self._sample(field, i, j)
-                    - 10 * self._sample(field, i - 1, j)
-                    + 2 * self._sample(field, i - 2, j)
+                    self._sample(vc, i + 2, j)
+                    - 2 * self._sample(vc, i + 1, j)
+                    + 9 * self._sample(vc, i, j)
+                    - 10 * self._sample(vc, i - 1, j)
+                    + 2 * self._sample(vc, i - 2, j)
                 )
                 / 6
             )
 
-        if field[i, j].y < 0:
+        if vc[i, j].y < 0:
             b = (
-                field[i, j].y
+                vc[i, j].y
                 * (
-                    -2 * self._sample(field, i, j + 2)
-                    + 10 * self._sample(field, i, j + 1)
-                    - 9 * self._sample(field, i, j)
-                    + 2 * self._sample(field, i, j - 1)
-                    - self._sample(field, i, j - 2)
+                    -2 * self._sample(vc, i, j + 2)
+                    + 10 * self._sample(vc, i, j + 1)
+                    - 9 * self._sample(vc, i, j)
+                    + 2 * self._sample(vc, i, j - 1)
+                    - self._sample(vc, i, j - 2)
                 )
                 / 6
             )
         else:
             b = (
-                field[i, j].y
+                vc[i, j].y
                 * (
-                    self._sample(field, i, j + 2)
-                    - 2 * self._sample(field, i, j + 1)
-                    + 9 * self._sample(field, i, j)
-                    - 10 * self._sample(field, i, j - 1)
-                    + 2 * self._sample(field, i, j - 2)
+                    self._sample(vc, i, j + 2)
+                    - 2 * self._sample(vc, i, j + 1)
+                    + 9 * self._sample(vc, i, j)
+                    - 10 * self._sample(vc, i, j - 1)
+                    + 2 * self._sample(vc, i, j - 2)
                 )
                 / 6
             )
