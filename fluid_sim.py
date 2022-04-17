@@ -189,26 +189,40 @@ class FluidSimulator:
 
     @ti.func
     def _diff_x(self, field, i, j):
+        """Central Difference x
+        """
         return 0.5 * (self._sample(field, i + 1, j) - self._sample(field, i - 1, j))
 
     @ti.func
     def _diff_y(self, field, i, j):
+        """Central Difference y
+        """
         return 0.5 * (self._sample(field, i, j + 1) - self._sample(field, i, j - 1))
 
     @ti.func
     def _diff2_x(self, field, i, j):
-        return (
-            self._sample(field, i + 1, j)
-            - 2.0 * self._sample(field, i, j)
-            + self._sample(field, i - 1, j)
-        )
+        return self._sample(field, i + 1, j) - 2.0 * field[i, j] + self._sample(field, i - 1, j)
 
     @ti.func
     def _diff2_y(self, field, i, j):
+        return self._sample(field, i, j + 1) - 2.0 * field[i, j] + self._sample(field, i, j - 1)
+
+    @ti.func
+    def _diff3_x(self, field, i, j):
         return (
-            self._sample(field, i, j + 1)
-            - 2.0 * self._sample(field, i, j)
-            + self._sample(field, i, j - 1)
+            self._sample(field, i + 2, j)
+            - 3.0 * self._sample(field, i + 1, j)
+            + 3.0 * field[i, j]
+            - self._sample(field, i - 1, j)
+        )
+
+    @ti.func
+    def _diff3_y(self, field, i, j):
+        return (
+            self._sample(field, i, j + 2)
+            - 3.0 * self._sample(field, i, j + 1)
+            + 3.0 * field[i, j]
+            - self._sample(field, i, j - 1)
         )
 
 
