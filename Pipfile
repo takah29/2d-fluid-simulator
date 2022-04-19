@@ -8,9 +8,9 @@ numpy = "*"
 taichi = "*"
 
 [dev-packages]
+black = "*"
 flake8 = "*"
 mypy = "*"
-black = "*"
 
 [requires]
 python_version = "3.9"
