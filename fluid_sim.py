@@ -14,7 +14,11 @@ from differentiation import (
     diff3_y,
 )
 from visualize import visualize_norm, visualize_xy, visualize_hue
-from boundary_condition import BoundaryCondition1, BoundaryCondition2, BoundaryCondition3
+from boundary_condition import (
+    create_boundary_condition1,
+    create_boundary_condition2,
+    create_boundary_condition3,
+)
 
 
 class DoubleBuffers:
@@ -282,8 +286,10 @@ def main():
     window = ti.ui.Window("Fluid Simulation", (2 * resolution, resolution), vsync=False)
     canvas = window.get_canvas()
 
-    bc = BoundaryCondition3(resolution)
-    fluid_sim = FluidSimulator(bc, 0.01, 1000.0, 2)
+    dt = 0.01
+    re = 2.0
+    bc = create_boundary_condition2(resolution)
+    fluid_sim = FluidSimulator(bc, dt, re, 2)
 
     # video_manager = ti.tools.VideoManager(output_dir="result", framerate=60, automatic_build=False)
 

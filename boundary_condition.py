@@ -3,10 +3,9 @@ import taichi as ti
 
 
 @ti.data_oriented
-class BaseBoundaryCondition:
-    def __init__(self, resolution):
-        self.resolution = resolution
-        self._bc_const, self._bc_mask = self._create_bc(resolution)
+class BoundaryCondition:
+    def __init__(self, bc_const, bc_mask):
+        self._bc_const, self._bc_mask = BoundaryCondition._to_field(bc_const, bc_mask)
 
     @ti.kernel
     def calc(self, vc: ti.template(), pc: ti.template()):
@@ -58,8 +57,8 @@ class BaseBoundaryCondition:
             vc[i, j - 1].y = vc[i, j + 1].y
             pc[i, j] = pc[i, j + 1]
 
-    @classmethod
-    def _to_field(cls, bc, bc_mask):
+    @staticmethod
+    def _to_field(bc, bc_mask):
         bc_field = ti.Vector.field(2, ti.types.f64, shape=(bc.shape[0], bc.shape[1]))
         bc_field.from_numpy(bc)
         bc_mask_field = ti.field(ti.types.u8, shape=(bc_mask.shape[0], bc_mask.shape[1]))
@@ -67,8 +66,8 @@ class BaseBoundaryCondition:
 
         return bc_field, bc_mask_field
 
-    @classmethod
-    def _set_circle(cls, bc, bc_mask, i, j, radius):
+    @staticmethod
+    def _set_circle(bc, bc_mask, i, j, radius):
         p = np.array([i, j])
         l_ = np.round(np.maximum(p - radius, 0)).astype(np.int32)
         u0 = round(min(p[0] + radius, bc.shape[0]))
@@ -81,107 +80,101 @@ class BaseBoundaryCondition:
                     bc_mask[i, j] = 1
 
 
-@ti.data_oriented
-class BoundaryCondition1(BaseBoundaryCondition):
-    def _create_bc(self, resolution):
-        # 1: 壁, 2: 流入部, 3: 流出部
-        bc = np.zeros((2 * resolution, resolution, 2))
-        bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint8)
+def create_boundary_condition1(resolution):
+    # 1: 壁, 2: 流入部, 3: 流出部
+    bc = np.zeros((2 * resolution, resolution, 2))
+    bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint8)
 
-        # 流入部の設定
-        bc[0, :] = np.array([10.0, 0.0])
-        bc_mask[0, :] = 2
-        # bc[0, resolution // 2 - 2 * size : resolution // 2 + 2 * size] = np.array([8.0, 0.0])
-        # bc_mask[0, resolution // 2 - 2 * size : resolution // 2 + 2 * size] = 2
+    # 流入部の設定
+    bc[0, :] = np.array([10.0, 0.0])
+    bc_mask[0, :] = 2
+    # bc[0, resolution // 2 - 2 * size : resolution // 2 + 2 * size] = np.array([8.0, 0.0])
+    # bc_mask[0, resolution // 2 - 2 * size : resolution // 2 + 2 * size] = 2
 
-        # 流出部の設定
-        bc[-1, :] = np.array([10.0, 0.0])
-        bc_mask[-1, :] = 3
+    # 流出部の設定
+    bc[-1, :] = np.array([10.0, 0.0])
+    bc_mask[-1, :] = 3
 
-        # 壁の設定
-        bc[:, :2] = np.array([0.0, 0.0])
-        bc_mask[:, :2] = 1
-        bc[:, -2:] = np.array([0.0, 0.0])
-        bc_mask[:, -2:] = 1
+    # 壁の設定
+    bc[:, :2] = np.array([0.0, 0.0])
+    bc_mask[:, :2] = 1
+    bc[:, -2:] = np.array([0.0, 0.0])
+    bc_mask[:, -2:] = 1
 
-        # 円柱の設定
-        r = resolution // 18
-        BaseBoundaryCondition._set_circle(bc, bc_mask, resolution // 2 - r, resolution // 2, r)
+    # 円柱の設定
+    r = resolution // 18
+    BoundaryCondition._set_circle(bc, bc_mask, resolution // 2 - r, resolution // 2, r)
 
-        return BaseBoundaryCondition._to_field(bc, bc_mask)
+    return BoundaryCondition(bc, bc_mask)
 
 
-@ti.data_oriented
-class BoundaryCondition2(BaseBoundaryCondition):
-    def _create_bc(self, resolution):
-        bc = np.zeros((2 * resolution, resolution, 2))
-        bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint8)
+def create_boundary_condition2(resolution):
+    bc = np.zeros((2 * resolution, resolution, 2))
+    bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint8)
 
-        # 壁の設定
-        size = resolution // 32  # 壁幅
-        bc[:2, :] = np.array([0.0, 0.0])
-        bc_mask[:2, :] = 1
-        bc[-2:, :] = np.array([0.0, 0.0])
-        bc_mask[-2:, :] = 1
-        bc[:, :2] = np.array([0.0, 0.0])
-        bc_mask[:, :2] = 1
-        bc[:, -2:] = np.array([0.0, 0.0])
-        bc_mask[:, -2:] = 1
+    # 壁の設定
+    size = resolution // 32  # 壁幅
+    bc[:2, :] = np.array([0.0, 0.0])
+    bc_mask[:2, :] = 1
+    bc[-2:, :] = np.array([0.0, 0.0])
+    bc_mask[-2:, :] = 1
+    bc[:, :2] = np.array([0.0, 0.0])
+    bc_mask[:, :2] = 1
+    bc[:, -2:] = np.array([0.0, 0.0])
+    bc_mask[:, -2:] = 1
 
-        x_point = 2 * resolution // 5
-        y_point = resolution // 2
-        # 左
-        bc[x_point - size : x_point + size, y_point:] = np.array([0.0, 0.0])
-        bc_mask[x_point - size : x_point + size, y_point:] = 1
-        # 真ん中左
-        bc[2 * x_point - size : 2 * x_point + size, 0:y_point] = np.array([0.0, 0.0])
-        bc_mask[2 * x_point - size : 2 * x_point + size, 0:y_point:] = 1
-        # 真ん中右
-        bc[3 * x_point - size : 3 * x_point + size, y_point:] = np.array([0.0, 0.0])
-        bc_mask[3 * x_point - size : 3 * x_point + size, y_point:] = 1
-        # 右
-        bc[4 * x_point - size : 4 * x_point + size, 0:y_point] = np.array([0.0, 0.0])
-        bc_mask[4 * x_point - size : 4 * x_point + size, 0:y_point] = 1
+    x_point = 2 * resolution // 5
+    y_point = resolution // 2
+    # 左
+    bc[x_point - size : x_point + size, y_point:] = np.array([0.0, 0.0])
+    bc_mask[x_point - size : x_point + size, y_point:] = 1
+    # 真ん中左
+    bc[2 * x_point - size : 2 * x_point + size, 0:y_point] = np.array([0.0, 0.0])
+    bc_mask[2 * x_point - size : 2 * x_point + size, 0:y_point:] = 1
+    # 真ん中右
+    bc[3 * x_point - size : 3 * x_point + size, y_point:] = np.array([0.0, 0.0])
+    bc_mask[3 * x_point - size : 3 * x_point + size, y_point:] = 1
+    # 右
+    bc[4 * x_point - size : 4 * x_point + size, 0:y_point] = np.array([0.0, 0.0])
+    bc_mask[4 * x_point - size : 4 * x_point + size, 0:y_point] = 1
 
-        # 流入部の設定
-        y_point = resolution // 6
-        bc[:2, 2 * y_point : 4 * y_point] = np.array([6.0, 0.0])
-        bc_mask[:2, 2 * y_point : 4 * y_point] = 2
+    # 流入部の設定
+    y_point = resolution // 6
+    bc[:2, 2 * y_point : 4 * y_point] = np.array([6.0, 0.0])
+    bc_mask[:2, 2 * y_point : 4 * y_point] = 2
 
-        # 流出部の設定
-        bc[-2:, 2 * y_point : 4 * y_point] = np.array([6.0, 0.0])
-        bc_mask[-2:, 2 * y_point : 4 * y_point] = 3
+    # 流出部の設定
+    bc[-2:, 2 * y_point : 4 * y_point] = np.array([6.0, 0.0])
+    bc_mask[-2:, 2 * y_point : 4 * y_point] = 3
 
-        return BaseBoundaryCondition._to_field(bc, bc_mask)
+    return BoundaryCondition(bc, bc_mask)
 
 
-@ti.data_oriented
-class BoundaryCondition3(BaseBoundaryCondition):
-    def _create_bc(self, resolution):
-        bc = np.zeros((2 * resolution, resolution, 2))
-        bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint8)
+def create_boundary_condition3(resolution):
+    bc = np.zeros((2 * resolution, resolution, 2))
+    bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint8)
 
-        # 流入部の設定
-        bc[0, :] = np.array([6.0, 0.0])
-        bc_mask[0, :] = 2
+    # 流入部の設定
+    bc[0, :] = np.array([8.0, 0.0])
+    bc_mask[0, :] = 2
 
-        # 流出部の設定
-        bc[-1, :] = np.array([6.0, 0.0])
-        bc_mask[-1, :] = 3
+    # 流出部の設定
+    bc[-1, :] = np.array([8.0, 0.0])
+    bc_mask[-1, :] = 3
 
-        # 壁の設定
-        bc[:, :2] = np.array([0.0, 0.0])
-        bc_mask[:, :2] = 1
-        bc[:, -2:] = np.array([0.0, 0.0])
-        bc_mask[:, -2:] = 1
+    # 壁の設定
+    bc[:, :2] = np.array([0.0, 0.0])
+    bc_mask[:, :2] = 1
+    bc[:, -2:] = np.array([0.0, 0.0])
+    bc_mask[:, -2:] = 1
 
-        # 円柱ランダム生成
-        ref_resolution = 500
-        np.random.seed(123)
-        points = np.random.uniform(0, 2 * resolution, (100, 2))
-        points = points[points[:, 1] < resolution]
-        r = 16 * (resolution / ref_resolution)
-        for p in points:
-            BaseBoundaryCondition._set_circle(bc, bc_mask, p[0], p[1], r)
+    # 円柱ランダム生成
+    ref_resolution = 500
+    np.random.seed(123)
+    points = np.random.uniform(0, 2 * resolution, (100, 2))
+    points = points[points[:, 1] < resolution]
+    r = 16 * (resolution / ref_resolution)
+    for p in points:
+        BoundaryCondition._set_circle(bc, bc_mask, p[0], p[1], r)
 
-        return BaseBoundaryCondition._to_field(bc, bc_mask)
+    return BoundaryCondition(bc, bc_mask)
