@@ -209,6 +209,7 @@ class FluidSimulator:
             k = i
         else:
             k = i - 1
+
         Dk_1 = fdiff_x(vc, k, j)
         qx1 = Dk_1
 
@@ -228,6 +229,7 @@ class FluidSimulator:
             k_star = k - 1
         else:
             k_star = k
+
         Dk_star_3 = diff3_x(vc, k_star, j) / 6.0
         Dk_star1_3 = diff3_x(vc, k_star + 1, j) / 6.0
 
@@ -246,16 +248,19 @@ class FluidSimulator:
             k = j
         else:
             k = j - 1
+
         Dk_1 = fdiff_y(vc, i, k)
         qy1 = Dk_1
 
         # second order
         Dk_2 = diff2_y(vc, i, k) / 2.0
         Dk1_2 = diff2_y(vc, i, k + 1) / 2.0
+
         if ti.abs(Dk_2.y) <= ti.abs(Dk1_2.y):
             c2 = Dk_2
         else:
             c2 = Dk1_2
+
         qy2 = c2 * (2 * (j - k) - 1)
 
         # third order
@@ -263,12 +268,15 @@ class FluidSimulator:
             k_star = k - 1
         else:
             k_star = k
+
         Dk_star_3 = diff3_y(vc, i, k_star) / 6.0
         Dk_star1_3 = diff3_y(vc, i, k_star + 1) / 6.0
+
         if ti.abs(Dk_star_3.y) <= ti.abs(Dk_star1_3.y):
             c3 = Dk_star_3
         else:
             c3 = Dk_star1_3
+
         qy3 = c3 * (3 * (j - k_star) ** 2 + 6 * (j - k_star) + 2)
 
         advect_y = vc[i, j].y * (qy1 + qy2 + qy3)
