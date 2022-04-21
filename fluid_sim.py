@@ -65,9 +65,9 @@ class FluidSimulator:
             self._update_pressures(self.p.current, self.p.next, self.v.current)
             self.p.swap()
 
-        self._to_buffer(self.rgb_buf, self.v.current, self.p.current)
 
     def get_buffer(self):
+        self._to_buffer(self.rgb_buf, self.v.current, self.p.current)
         return self.rgb_buf
 
     @ti.kernel
@@ -306,11 +306,11 @@ def main():
             fluid_sim.step()
 
         img = fluid_sim.get_buffer()
-        canvas.set_image(img)
-        window.show()
 
-        # if count % 50 == 0:
-        #     video_manager.write_frame(img)
+        if count % 10 == 0:
+            canvas.set_image(img)
+            window.show()
+            # video_manager.write_frame(img)
 
         count += 1
 
