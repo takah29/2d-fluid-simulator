@@ -6,7 +6,7 @@ from boundary_condition import (
     create_boundary_condition3,
 )
 from advection import advect, advect_upwind, advect_kk_scheme, advect_eno
-from updater import MacUpdater, SmacUpdater
+from updater import MacUpdater, FsUpdater
 from visualization import visualize_norm
 
 
@@ -27,14 +27,20 @@ class FluidSimulator:
     def _to_buffer(self, rgb_buf: ti.template(), vc: ti.template(), pc: ti.template()):
         for i, j in rgb_buf:
             rgb_buf[i, j] = 0.05 * visualize_norm(vc[i, j])
-            # rgb_buf[i, j].x += 0.001 * pc[i, j]
+            rgb_buf[i, j].x += 0.001 * pc[i, j]
             if self._updater.is_wall(i, j):
                 rgb_buf[i, j].x = 0.5
                 rgb_buf[i, j].y = 0.5
                 rgb_buf[i, j].z = 0.7
 
     @staticmethod
-    def create(resolution, dt, re):
-        boundary_condition = create_boundary_condition1(resolution)
-        updater = SmacUpdater(boundary_condition, advect_kk_scheme, dt, re, 2000)
+    def create(num, resolution, dt, re):
+        if num == 2:
+            boundary_condition = create_boundary_condition2(resolution)
+        elif num == 3:
+            boundary_condition = create_boundary_condition3(resolution)
+        else:
+            boundary_condition = create_boundary_condition1(resolution)
+
+        updater = MacUpdater(boundary_condition, advect_kk_scheme, dt, re, 2)
         return FluidSimulator(updater)

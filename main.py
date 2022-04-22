@@ -12,9 +12,9 @@ def main():
     window = ti.ui.Window("Fluid Simulation", (2 * resolution, resolution), vsync=False)
     canvas = window.get_canvas()
 
-    dt = 0.001
-    re = 1.0
-    fluid_sim = FluidSimulator.create(resolution, dt, re)
+    dt = 0.01
+    re = 2000.0
+    fluid_sim = FluidSimulator.create(3, resolution, dt, re)
 
     # video_manager = ti.tools.VideoManager(output_dir="result", framerate=60, automatic_build=False)
 
