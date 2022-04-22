@@ -119,82 +119,65 @@ class MacUpdater(Updater):
                 ) * 0.25
 
 
-# @ti.data_oriented
-# class SmacUpdater(Updater):
-#     """Simplified Maker And Cell method"""
+@ti.data_oriented
+class FsUpdater(Updater):
+    """Fractional Step method"""
 
-#     def __init__(self, boundary_condition, advect_function, dt, Re, p_iter):
-#         super().__init__(boundary_condition)
+    def __init__(self, boundary_condition, advect_function, dt, Re, p_iter):
+        super().__init__(boundary_condition)
 
-#         self._advect = advect_function
+        self._advect = advect_function
 
-#         self.dt = dt
-#         self.Re = Re
+        self.dt = dt
+        self.Re = Re
 
-#         self.v = ti.Vector.field(2, float, shape=self._resolution)  # velocities
-#         self.p = DoubleBuffers(self._resolution, 1)  # pressure
-#         self.tv = ti.Vector.field(2, float, shape=self._resolution)  # temp velocities
-#         self.dp = DoubleBuffers(self._resolution, 1)  # delta_p
+        self.v = ti.Vector.field(2, float, shape=self._resolution)  # velocities
+        self.p = DoubleBuffers(self._resolution, 1)  # pressure
+        self.tv = ti.Vector.field(2, float, shape=self._resolution)  # temp velocities
 
-#         self.p_iter = p_iter
+        self.p_iter = p_iter
 
-#         # initial condition
-#         self.v.fill(ti.Vector([0.4, 0.0]))
-#         self._bc.calc(self.v, self.p.current)
+        # initial condition
+        self.v.fill(ti.Vector([0.4, 0.0]))
+        self._bc.calc(self.v, self.p.current)
 
-#     def update(self):
-#         self._bc.calc(self.v, self.p.current)
-#         self._calc_temp_velocities(self.tv, self.v, self.p.current)
+    def update(self):
+        self._bc.calc(self.v, self.p.current)
+        self._calc_temp_velocities(self.tv, self.v)
 
-#         for _ in range(self.p_iter):
-#             self._calc_delta_pressures(self.dp.next, self.dp.current, self.tv)
-#             self.dp.swap()
+        for _ in range(self.p_iter):
+            self._update_pressures(self.p.next, self.p.current, self.tv)
+            self.p.swap()
 
-#         self._update_pressures(self.p.next, self.p.current, self.dp.current)
-#         self.p.swap()
+        self._update_velocities(self.v, self.tv, self.p.current)
 
-#         self._update_velocities(self.v, self.tv, self.dp.current)
+    def get_fields(self):
+        return self.v, self.p.current
 
-#     def get_fields(self):
-#         return self.v, self.p.current
+    @ti.kernel
+    def _calc_temp_velocities(self, tv: ti.template(), v: ti.template()):
+        for i, j in tv:
+            if not self._bc.is_wall(i, j):
+                tv[i, j] = v[i, j] + self.dt * (
+                    -self._advect(v, i, j) + (diff2_x(v, i, j) + diff2_y(v, i, j)) / self.Re
+                )
 
-#     @ti.kernel
-#     def _calc_temp_velocities(self, tv: ti.template(), v: ti.template(), pc: ti.template()):
-#         for i, j in tv:
-#             if not self._bc.is_wall(i, j):
-#                 tv[i, j] = v[i, j] + self.dt * (
-#                     -self._advect(v, i, j)
-#                     - ti.Vector(
-#                         [
-#                             diff_x(pc, i, j),
-#                             diff_y(pc, i, j),
-#                         ]
-#                     )
-#                     + (diff2_x(v, i, j) + diff2_y(v, i, j)) / self.Re
-#                 )
+    @ti.kernel
+    def _update_pressures(self, pn: ti.template(), pc: ti.template(), tv: ti.template()):
+        for i, j in pn:
+            if not self._bc.is_wall(i, j):
+                pn[i, j] = 0.25 * (
+                    (
+                        sample(pc, i + 1, j)
+                        + sample(pc, i - 1, j)
+                        + sample(pc, i, j + 1)
+                        + sample(pc, i, j - 1)
+                    )
+                    - (diff_x(tv, i, j).x + diff_y(tv, i, j).y) / self.dt
+                )
 
-#     @ti.kernel
-#     def _calc_delta_pressures(self, dpn: ti.template(), dpc: ti.template(), tv: ti.template()):
-#         for i, j in dpn:
-#             if not self._bc.is_wall(i, j):
-#                 dpn[i, j] = 0.25 * (
-#                     (
-#                         sample(dpc, i + 1, j)
-#                         + sample(dpc, i - 1, j)
-#                         + sample(dpc, i, j + 1)
-#                         + sample(dpc, i, j - 1)
-#                     )
-#                     - (diff_x(tv, i, j).x + diff_y(tv, i, j).y) / self.dt
-#                 )
-
-#     @ti.kernel
-#     def _update_pressures(self, pn: ti.template(), pc: ti.template(), dpc: ti.template()):
-#         for i, j in pn:
-#             if not self._bc.is_wall(i, j):
-#                 pn[i, j] = pc[i, j] + dpc[i, j]
-
-#     @ti.kernel
-#     def _update_velocities(self, v: ti.template(), tv: ti.template(), dpc: ti.template()):
-#         for i, j in v:
-#             if not self._bc.is_wall(i, j):
-#                 v[i, j] = tv[i, j] - self.dt * ti.Vector([diff_x(dpc, i, j), diff_y(dpc, i, j)])
+    @ti.kernel
+    def _update_velocities(self, v: ti.template(), tv: ti.template(), pc: ti.template()):
+        for i, j in v:
+            if not self._bc.is_wall(i, j):
+                v[i, j] = tv[i, j] - self.dt * ti.Vector([diff_x(pc, i, j), diff_y(pc, i, j)])
