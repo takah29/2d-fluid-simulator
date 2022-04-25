@@ -1,3 +1,4 @@
+from audioop import reverse
 import taichi as ti
 
 from differentiation import (
@@ -16,173 +17,121 @@ from differentiation import (
 
 
 @ti.func
-def advect(vc, i, j):
+def advect(vc, phi, i, j):
     """Central Differencing"""
-    return vc[i, j].x * diff_x(vc, i, j) + vc[i, j].y * diff_y(vc, i, j)
+    return vc[i, j].x * diff_x(phi, i, j) + vc[i, j].y * diff_y(phi, i, j)
 
 
 @ti.func
-def advect_upwind(vc, i, j):
+def advect_upwind(vc, phi, i, j):
     """Upwind differencing
 
     http://www.slis.tsukuba.ac.jp/~fujisawa.makoto.fu/cgi-bin/wiki/index.php?%B0%DC%CE%AE%CB%A1#tac8e468
     """
-    a = b = ti.Vector([0.0, 0.0])
-    if vc[i, j].x < 0.0:
-        a = vc[i, j].x * fdiff_x(vc, i, j)
-    else:
-        a = vc[i, j].x * bdiff_x(vc, i, j)
+    k = i if vc[i, j].x < 0.0 else i - 1
+    a = vc[i, j].x * fdiff_x(phi, k, j)
 
-    if vc[i, j].y < 0.0:
-        b = vc[i, j].y * fdiff_y(vc, i, j)
-    else:
-        b = vc[i, j].y * bdiff_y(vc, i, j)
+    k = j if vc[i, j].y < 0.0 else j - 1
+    b = vc[i, j].y * fdiff_y(phi, i, k)
 
     return a + b
 
 
 @ti.func
-def advect_kk_scheme(vc, i, j):
+def advect_kk_scheme(vc, phi, i, j):
     """Kawamura-Kuwabara Scheme
 
     http://www.slis.tsukuba.ac.jp/~fujisawa.makoto.fu/cgi-bin/wiki/index.php?%B0%DC%CE%AE%CB%A1#y2dbc484
     """
-    a = b = ti.Vector([0.0, 0.0])
+    coef = [-2, 10, -9, 2, -1]
+    v = ti.Vector([0.0, 0.0, 0.0, 0.0, 0.0])
+
     if vc[i, j].x < 0:
-        a = (
-            vc[i, j].x
-            * (
-                -2 * sample(vc, i + 2, j)
-                + 10 * sample(vc, i + 1, j)
-                - 9 * sample(vc, i, j)
-                + 2 * sample(vc, i - 1, j)
-                - sample(vc, i - 2, j)
-            )
-            / 6
-        )
+        v = ti.Vector(coef)
     else:
-        a = (
-            vc[i, j].x
-            * (
-                sample(vc, i + 2, j)
-                - 2 * sample(vc, i + 1, j)
-                + 9 * sample(vc, i, j)
-                - 10 * sample(vc, i - 1, j)
-                + 2 * sample(vc, i - 2, j)
-            )
-            / 6
-        )
+        v = -ti.Vector(coef[::-1])
+
+    mx = ti.Matrix.cols(
+        [
+            sample(phi, i + 2, j),
+            sample(phi, i + 1, j),
+            sample(phi, i, j),
+            sample(phi, i - 1, j),
+            sample(phi, i - 2, j),
+        ]
+    )
+    a = mx @ v / 6
 
     if vc[i, j].y < 0:
-        b = (
-            vc[i, j].y
-            * (
-                -2 * sample(vc, i, j + 2)
-                + 10 * sample(vc, i, j + 1)
-                - 9 * sample(vc, i, j)
-                + 2 * sample(vc, i, j - 1)
-                - sample(vc, i, j - 2)
-            )
-            / 6
-        )
+        v = ti.Vector(coef)
     else:
-        b = (
-            vc[i, j].y
-            * (
-                sample(vc, i, j + 2)
-                - 2 * sample(vc, i, j + 1)
-                + 9 * sample(vc, i, j)
-                - 10 * sample(vc, i, j - 1)
-                + 2 * sample(vc, i, j - 2)
-            )
-            / 6
-        )
+        v = -ti.Vector(coef[::-1])
 
-    return a + b
+    my = ti.Matrix.cols(
+        [
+            sample(phi, i, j + 2),
+            sample(phi, i, j + 1),
+            sample(phi, i, j),
+            sample(phi, i, j - 1),
+            sample(phi, i, j - 2),
+        ]
+    )
+    b = my @ v / 6
+
+    return vc[i, j].x * a + vc[i, j].y * b
 
 
 @ti.func
-def advect_eno(vc, i, j):
+def advect_eno(vc, phi, i, j):
     """ENO(Essentially Non-Oscillatory polynomial interpolation)
 
     http://www.slis.tsukuba.ac.jp/~fujisawa.makoto.fu/cgi-bin/wiki/index.php?%B0%DC%CE%AE%CB%A1#ufe6b856
     """
-    c2 = c3 = ti.Vector([0.0, 0.0])
+    # c2 = c3 = ti.Vector([0.0, 0.0])
     k = k_star = 0
     # calc advect_x
     # first order
-    if vc[i, j].x < 0.0:
-        k = i
-    else:
-        k = i - 1
+    k = i if vc[i, j].x < 0.0 else i - 1
 
-    Dk_1 = fdiff_x(vc, k, j)
+    Dk_1 = fdiff_x(phi, k, j)
     qx1 = Dk_1
 
     # second order
-    Dk_2 = diff2_x(vc, k, j) / 2.0
-    Dk1_2 = diff2_x(vc, k + 1, j) / 2.0
+    Dk_2 = diff2_x(phi, k, j) / 2.0
+    Dk1_2 = diff2_x(phi, k + 1, j) / 2.0
 
-    if ti.abs(Dk_2.x) <= ti.abs(Dk1_2.x):
-        c2 = Dk_2
-    else:
-        c2 = Dk1_2
-
+    c2 = Dk_2 if ti.abs(Dk_2.x) <= ti.abs(Dk1_2.x) else Dk1_2
     qx2 = c2 * (2 * (i - k) - 1)
 
     # third order
-    if ti.abs(Dk_2.x) <= ti.abs(Dk1_2.x):
-        k_star = k - 1
-    else:
-        k_star = k
+    k_star = k - 1 if ti.abs(Dk_2.x) <= ti.abs(Dk1_2.x) else k
+    Dk_star_3 = diff3_x(phi, k_star, j) / 6.0
+    Dk_star1_3 = diff3_x(phi, k_star + 1, j) / 6.0
 
-    Dk_star_3 = diff3_x(vc, k_star, j) / 6.0
-    Dk_star1_3 = diff3_x(vc, k_star + 1, j) / 6.0
-
-    if ti.abs(Dk_star_3.x) <= ti.abs(Dk_star1_3.x):
-        c3 = Dk_star_3
-    else:
-        c3 = Dk_star1_3
-
+    c3 = Dk_star_3 if ti.abs(Dk_star_3.x) <= ti.abs(Dk_star1_3.x) else Dk_star1_3
     qx3 = c3 * (3 * (i - k_star) ** 2 + 6 * (i - k_star) + 2)
 
     advect_x = vc[i, j].x * (qx1 + qx2 + qx3)
 
     # calc advect_y
     # first order
-    if vc[i, j].y < 0.0:
-        k = j
-    else:
-        k = j - 1
-
-    Dk_1 = fdiff_y(vc, i, k)
+    k = j if vc[i, j].y < 0.0 else j - 1
+    Dk_1 = fdiff_y(phi, i, k)
     qy1 = Dk_1
 
     # second order
-    Dk_2 = diff2_y(vc, i, k) / 2.0
-    Dk1_2 = diff2_y(vc, i, k + 1) / 2.0
+    Dk_2 = diff2_y(phi, i, k) / 2.0
+    Dk1_2 = diff2_y(phi, i, k + 1) / 2.0
 
-    if ti.abs(Dk_2.y) <= ti.abs(Dk1_2.y):
-        c2 = Dk_2
-    else:
-        c2 = Dk1_2
-
+    c2 = Dk_2 if ti.abs(Dk_2.y) <= ti.abs(Dk1_2.y) else Dk1_2
     qy2 = c2 * (2 * (j - k) - 1)
 
     # third order
-    if ti.abs(Dk_2.y) <= ti.abs(Dk1_2.y):
-        k_star = k - 1
-    else:
-        k_star = k
+    k_star = k - 1 if ti.abs(Dk_2.y) <= ti.abs(Dk1_2.y) else k
+    Dk_star_3 = diff3_y(phi, i, k_star) / 6.0
+    Dk_star1_3 = diff3_y(phi, i, k_star + 1) / 6.0
 
-    Dk_star_3 = diff3_y(vc, i, k_star) / 6.0
-    Dk_star1_3 = diff3_y(vc, i, k_star + 1) / 6.0
-
-    if ti.abs(Dk_star_3.y) <= ti.abs(Dk_star1_3.y):
-        c3 = Dk_star_3
-    else:
-        c3 = Dk_star1_3
-
+    c3 = Dk_star_3 if ti.abs(Dk_star_3.y) <= ti.abs(Dk_star1_3.y) else Dk_star1_3
     qy3 = c3 * (3 * (j - k_star) ** 2 + 6 * (j - k_star) + 2)
 
     advect_y = vc[i, j].y * (qy1 + qy2 + qy3)
