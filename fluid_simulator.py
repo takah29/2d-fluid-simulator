@@ -68,7 +68,7 @@ class DyesFluidSimulator:
     ):
         for i, j in rgb_buf:
             rgb_buf[i, j] = dyes[i, j]
-            c = 0.002 * p[i, j]
+            c = 0.001 * p[i, j]
             rgb_buf[i, j] += ti.Vector([c, c, c])
             if self._solver.is_wall(i, j):
                 rgb_buf[i, j].x = 0.5

@@ -241,7 +241,7 @@ def create_dyes_boundary_condition1(resolution):
     bc[0, :] = np.array([10.0, 0.0])
     bc_dyes[0, :] = np.array([0.2, 0.2, 1.0])
     for i in range(0, resolution, 40):
-        bc_dyes[0, i : i + 20] = np.array([1.0, 0.2, 0.2])
+        bc_dyes[0, i : i + 20] = np.array([1.0, 1.0, 0.2])
     bc_mask[0, :] = 2
     # bc[0, resolution // 2 - 2 * size : resolution // 2 + 2 * size] = np.array([8.0, 0.0])
     # bc_mask[0, resolution // 2 - 2 * size : resolution // 2 + 2 * size] = 2
@@ -274,7 +274,7 @@ def create_dyes_boundary_condition2(resolution):
     bc_mask[:2, 2 * y_point : 4 * y_point] = 2
     bc_dyes[:2, 2 * y_point : 4 * y_point] = np.array([0.2, 0.2, 1.0])
     for i in range(0, resolution, 40):
-        bc_dyes[:2, i : i + 20] = np.array([1.0, 0.2, 0.2])
+        bc_dyes[:2, i : i + 20] = np.array([1.0, 1.0, 0.2])
 
     # 壁の設定
     size = resolution // 32  # 壁幅
@@ -321,7 +321,7 @@ def create_dyes_boundary_condition3(resolution):
     bc[0, :] = np.array([8.0, 0.0])
     bc_dyes[0, :] = np.array([0.2, 0.2, 1.0])
     for i in range(0, resolution, 40):
-        bc_dyes[0, i : i + 20] = np.array([1.0, 0.2, 0.2])
+        bc_dyes[0, i : i + 20] = np.array([1.0, 1.0, 0.2])
     bc_mask[0, :] = 2
 
     # 流出部の設定
