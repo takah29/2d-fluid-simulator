@@ -1,5 +1,5 @@
 import taichi as ti
-from fluid_simulator import FluidSimulator
+from fluid_simulator import FluidSimulator, DyesFluidSimulator
 
 
 def main():
@@ -13,8 +13,8 @@ def main():
     canvas = window.get_canvas()
 
     dt = 0.01
-    re = 2000.0
-    fluid_sim = FluidSimulator.create(3, resolution, dt, re)
+    re = 2.0
+    fluid_sim = DyesFluidSimulator.create(3, resolution, dt, re)
 
     # video_manager = ti.tools.VideoManager(output_dir="result", framerate=60, automatic_build=False)
 

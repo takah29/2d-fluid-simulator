@@ -1,6 +1,5 @@
 from abc import ABCMeta, abstractmethod
 
-import numpy as np
 import taichi as ti
 
 from differentiation import (
@@ -71,7 +70,6 @@ class MacUpdater(Updater):
 
         # initial condition
         self.v.current.fill(ti.Vector([0.4, 0.0]))
-        self._bc.calc(self.v.current, self.p.current)
 
     def update(self):
         self._bc.calc(self.v.current, self.p.current)
@@ -91,7 +89,7 @@ class MacUpdater(Updater):
         for i, j in vn:
             if not self._bc.is_wall(i, j):
                 vn[i, j] = vc[i, j] + self.dt * (
-                    -self._advect(vc, i, j)
+                    -self._advect(vc, vc, i, j)
                     - ti.Vector(
                         [
                             diff_x(pc, i, j),
@@ -139,7 +137,6 @@ class FsUpdater(Updater):
 
         # initial condition
         self.v.fill(ti.Vector([0.4, 0.0]))
-        self._bc.calc(self.v, self.p.current)
 
     def update(self):
         self._bc.calc(self.v, self.p.current)
@@ -159,7 +156,7 @@ class FsUpdater(Updater):
         for i, j in tv:
             if not self._bc.is_wall(i, j):
                 tv[i, j] = v[i, j] + self.dt * (
-                    -self._advect(v, i, j) + (diff2_x(v, i, j) + diff2_y(v, i, j)) / self.Re
+                    -self._advect(v, v, i, j) + (diff2_x(v, i, j) + diff2_y(v, i, j)) / self.Re
                 )
 
     @ti.kernel
@@ -181,3 +178,35 @@ class FsUpdater(Updater):
         for i, j in v:
             if not self._bc.is_wall(i, j):
                 v[i, j] = tv[i, j] - self.dt * ti.Vector([diff_x(pc, i, j), diff_y(pc, i, j)])
+
+
+@ti.data_oriented
+class DyesMacUpdater(MacUpdater):
+    """Maker And Cell method"""
+
+    def __init__(self, boundary_condition, advect_function, dt, Re, p_iter):
+        super().__init__(boundary_condition, advect_function, dt, Re, p_iter)
+        self.dyes = DoubleBuffers(self._resolution, 3)  # dyes
+
+    def update(self):
+        self._bc.calc(self.v.current, self.p.current, self.dyes.current)
+        self._update_velocities(self.v.next, self.v.current, self.p.current)
+        self.v.swap()
+
+        self._bc.calc(self.v.current, self.p.current, self.dyes.current)
+        for _ in range(self.p_iter):
+            self._update_pressures(self.p.next, self.p.current, self.v.current)
+            self.p.swap()
+
+        self._bc.calc(self.v.current, self.p.current, self.dyes.current)
+        self._update_dyes(self.dyes.next, self.dyes.current, self.v.current)
+        self.dyes.swap()
+
+    def get_fields(self):
+        return self.dyes.current, self.v.current, self.p.current
+
+    @ti.kernel
+    def _update_dyes(self, dn: ti.template(), dc: ti.template(), vc: ti.template()):
+        for i, j in dn:
+            if not self._bc.is_wall(i, j):
+                dn[i, j] = dc[i, j] - self.dt * self._advect(vc, dc, i, j)
