@@ -1,4 +1,7 @@
+import sys
+
 import taichi as ti
+
 
 from boundary_condition import (
     create_boundary_condition1,
@@ -38,12 +41,14 @@ class FluidSimulator:
 
     @staticmethod
     def create(num, resolution, dt, re):
-        if num == 2:
+        if num == 1:
+            boundary_condition = create_boundary_condition1(resolution)
+        elif num == 2:
             boundary_condition = create_boundary_condition2(resolution)
         elif num == 3:
             boundary_condition = create_boundary_condition3(resolution)
         else:
-            boundary_condition = create_boundary_condition1(resolution)
+            raise NotImplementedError
 
         solver = MacSolver(boundary_condition, advect_kk_scheme, dt, re, 2)
         return FluidSimulator(solver)
@@ -77,12 +82,14 @@ class DyesFluidSimulator:
 
     @staticmethod
     def create(num, resolution, dt, re):
-        if num == 2:
+        if num == 1:
+            boundary_condition = create_dyes_boundary_condition1(resolution)
+        elif num == 2:
             boundary_condition = create_dyes_boundary_condition2(resolution)
         elif num == 3:
             boundary_condition = create_dyes_boundary_condition3(resolution)
         else:
-            boundary_condition = create_dyes_boundary_condition1(resolution)
+            raise NotImplementedError
 
-        solver = DyesMacSolver(boundary_condition, advect_kk_scheme, dt, re, 2)
+        solver = DyesMacSolver(boundary_condition, advect_eno, dt, re, 2)
         return DyesFluidSimulator(solver)
