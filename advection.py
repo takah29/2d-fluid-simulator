@@ -1,4 +1,3 @@
-from audioop import reverse
 import taichi as ti
 
 from differentiation import (

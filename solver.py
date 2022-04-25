@@ -33,7 +33,7 @@ class DoubleBuffers:
 
 
 @ti.data_oriented
-class Updater(metaclass=ABCMeta):
+class Solver(metaclass=ABCMeta):
     def __init__(self, boundary_condition):
         self._bc = boundary_condition
         self._resolution = boundary_condition.get_resolution()
@@ -52,7 +52,7 @@ class Updater(metaclass=ABCMeta):
 
 
 @ti.data_oriented
-class MacUpdater(Updater):
+class MacSolver(Solver):
     """Maker And Cell method"""
 
     def __init__(self, boundary_condition, advect_function, dt, Re, p_iter):
@@ -118,7 +118,7 @@ class MacUpdater(Updater):
 
 
 @ti.data_oriented
-class FsUpdater(Updater):
+class FsSolver(Solver):
     """Fractional Step method"""
 
     def __init__(self, boundary_condition, advect_function, dt, Re, p_iter):
@@ -181,7 +181,7 @@ class FsUpdater(Updater):
 
 
 @ti.data_oriented
-class DyesMacUpdater(MacUpdater):
+class DyesMacSolver(MacSolver):
     """Maker And Cell method"""
 
     def __init__(self, boundary_condition, advect_function, dt, Re, p_iter):
