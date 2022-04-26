@@ -209,4 +209,4 @@ class DyesMacSolver(MacSolver):
     def _update_dyes(self, dn: ti.template(), dc: ti.template(), vc: ti.template()):
         for i, j in dn:
             if not self._bc.is_wall(i, j):
-                dn[i, j] = dc[i, j] - self.dt * self._advect(vc, dc, i, j)
+                dn[i, j] = ti.max(ti.min(dc[i, j] - self.dt * self._advect(vc, dc, i, j), 1.0), 0.0)
