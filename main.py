@@ -13,7 +13,7 @@ def main():
     canvas = window.get_canvas()
 
     dt = 0.01
-    re = 20000.0
+    re = 2000
     fluid_sim = FluidSimulator.create(3, resolution, dt, re)
 
     # video_manager = ti.tools.VideoManager(output_dir="result", framerate=60, automatic_build=False)
@@ -32,7 +32,7 @@ def main():
 
         img = fluid_sim.get_buffer()
 
-        if count % 1 == 0:
+        if count % 10 == 0:
             canvas.set_image(img)
             window.show()
             # video_manager.write_frame(img)
