@@ -91,5 +91,5 @@ class DyesFluidSimulator:
         else:
             raise NotImplementedError
 
-        solver = DyesMacSolver(boundary_condition, advect_eno, dt, re, 2)
+        solver = DyesMacSolver(boundary_condition, advect_kk_scheme, dt, re, 2)
         return DyesFluidSimulator(solver)
