@@ -44,18 +44,20 @@ class BoundaryCondition:
     @ti.func
     def _set_inside_wall_bc(self, vc, pc, bc_mask, i, j):
         """壁内部の境界条件を設定する"""
-        if bc_mask[i - 1, j] == 0 and bc_mask[i, j] == 1 and bc_mask[i + 1, j] == 1:
-            vc[i + 1, j].x = vc[i - 1, j].x
-            pc[i, j] = pc[i - 1, j]
-        elif bc_mask[i - 1, j] == 1 and bc_mask[i, j] == 1 and bc_mask[i + 1, j] == 0:
-            vc[i - 1, j].x = vc[i + 1, j].x
-            pc[i, j] = pc[i + 1, j]
-        elif bc_mask[i, j - 1] == 0 and bc_mask[i, j] == 1 and bc_mask[i, j + 1] == 1:
-            vc[i, j + 1].y = vc[i, j - 1].y
-            pc[i, j] = pc[i, j - 1]
-        elif bc_mask[i, j - 1] == 1 and bc_mask[i, j] == 1 and bc_mask[i, j + 1] == 0:
-            vc[i, j - 1].y = vc[i, j + 1].y
-            pc[i, j] = pc[i, j + 1]
+
+        if bc_mask[i, j] == 1:
+            if bc_mask[i - 1, j] == 0 and bc_mask[i + 1, j] == 1:
+                vc[i + 1, j].x = vc[i - 1, j].x
+                pc[i, j] = pc[i - 1, j]
+            if bc_mask[i - 1, j] == 1 and bc_mask[i + 1, j] == 0:
+                vc[i - 1, j].x = vc[i + 1, j].x
+                pc[i, j] = pc[i + 1, j]
+            if bc_mask[i, j - 1] == 0 and bc_mask[i, j + 1] == 1:
+                vc[i, j + 1].y = vc[i, j - 1].y
+                pc[i, j] = pc[i, j - 1]
+            if bc_mask[i, j - 1] == 1 and bc_mask[i, j + 1] == 0:
+                vc[i, j - 1].y = vc[i, j + 1].y
+                pc[i, j] = pc[i, j + 1]
 
     @staticmethod
     def _to_field(bc, bc_mask):
@@ -117,18 +119,20 @@ class DyesBoundaryCondition(BoundaryCondition):
     @ti.func
     def _set_inside_wall_dyes_bc(self, dyes, bc_mask, i, j):
         """壁内部の色を設定する"""
-        if bc_mask[i - 1, j] == 0 and bc_mask[i, j] == 1 and bc_mask[i + 1, j] == 1:
-            dyes[i, j] = dyes[i - 1, j]
-            dyes[i + 1, j] = dyes[i - 1, j]
-        elif bc_mask[i - 1, j] == 1 and bc_mask[i, j] == 1 and bc_mask[i + 1, j] == 0:
-            dyes[i, j] = dyes[i + 1, j]
-            dyes[i - 1, j] = dyes[i + 1, j]
-        elif bc_mask[i, j - 1] == 0 and bc_mask[i, j] == 1 and bc_mask[i, j + 1] == 1:
-            dyes[i, j] = dyes[i, j - 1]
-            dyes[i, j + 1] = dyes[i, j - 1]
-        elif bc_mask[i, j - 1] == 1 and bc_mask[i, j] == 1 and bc_mask[i, j + 1] == 0:
-            dyes[i, j] = dyes[i, j + 1]
-            dyes[i, j - 1] = dyes[i, j + 1]
+
+        if bc_mask[i, j] == 1:
+            if bc_mask[i - 1, j] == 0 and bc_mask[i + 1, j] == 1:
+                dyes[i, j] = dyes[i - 1, j]
+                dyes[i + 1, j] = dyes[i - 1, j]
+            if bc_mask[i - 1, j] == 1 and bc_mask[i + 1, j] == 0:
+                dyes[i, j] = dyes[i + 1, j]
+                dyes[i - 1, j] = dyes[i + 1, j]
+            if bc_mask[i, j - 1] == 0 and bc_mask[i, j + 1] == 1:
+                dyes[i, j] = dyes[i, j - 1]
+                dyes[i, j + 1] = dyes[i, j - 1]
+            if bc_mask[i, j - 1] == 1 and bc_mask[i, j + 1] == 0:
+                dyes[i, j] = dyes[i, j + 1]
+                dyes[i, j - 1] = dyes[i, j + 1]
 
 
 def create_boundary_condition1(resolution):
@@ -280,8 +284,8 @@ def create_dyes_boundary_condition2(resolution):
     size = resolution // 32  # 壁幅
     bc[:2, : resolution // 3] = np.array([0.0, 0.0])
     bc_mask[:2, : resolution // 3] = 1
-    bc[:2, -resolution // 3:] = np.array([0.0, 0.0])
-    bc_mask[:2, -resolution // 3:] = 1
+    bc[:2, -resolution // 3 :] = np.array([0.0, 0.0])
+    bc_mask[:2, -resolution // 3 :] = 1
     bc[-2:, :] = np.array([0.0, 0.0])
     bc_mask[-2:, :] = 1
     bc[:, :2] = np.array([0.0, 0.0])
