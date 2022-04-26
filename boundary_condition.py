@@ -98,7 +98,6 @@ class DyesBoundaryCondition(BoundaryCondition):
             self._set_outflow_bc(vc, pc, bc_mask, i, j)
             if 0 < i < vc.shape[0] and 0 < j < vc.shape[1]:
                 self._set_inside_wall_bc(vc, pc, bc_mask, i, j)
-                self._set_inside_wall_dyes_bc(dyes, bc_mask, i, j)
 
     @staticmethod
     def _to_field(bc, bc_dyes, bc_mask):
@@ -115,25 +114,6 @@ class DyesBoundaryCondition(BoundaryCondition):
     def _set_indyes_bc(self, dyes, bc_dyes, bc_mask, i, j):
         if bc_mask[i, j] == 2:
             dyes[i, j] = bc_dyes[i, j]
-
-    @ti.func
-    def _set_inside_wall_dyes_bc(self, dyes, bc_mask, i, j):
-        """壁内部の色を設定する"""
-
-        if bc_mask[i, j] == 1:
-            if bc_mask[i - 1, j] == 0 and bc_mask[i + 1, j] == 1:
-                dyes[i, j] = dyes[i - 1, j]
-                dyes[i + 1, j] = dyes[i - 1, j]
-            if bc_mask[i - 1, j] == 1 and bc_mask[i + 1, j] == 0:
-                dyes[i, j] = dyes[i + 1, j]
-                dyes[i - 1, j] = dyes[i + 1, j]
-            if bc_mask[i, j - 1] == 0 and bc_mask[i, j + 1] == 1:
-                dyes[i, j] = dyes[i, j - 1]
-                dyes[i, j + 1] = dyes[i, j - 1]
-            if bc_mask[i, j - 1] == 1 and bc_mask[i, j + 1] == 0:
-                dyes[i, j] = dyes[i, j + 1]
-                dyes[i, j - 1] = dyes[i, j + 1]
-
 
 def create_boundary_condition1(resolution):
     # 1: 壁, 2: 流入部, 3: 流出部
