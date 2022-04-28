@@ -55,18 +55,7 @@ class FluidSimulator:
 
 
 @ti.data_oriented
-class DyesFluidSimulator:
-    def __init__(self, solver):
-        self._solver = solver
-        self.rgb_buf = ti.Vector.field(3, float, shape=solver._resolution)  # image buffer
-
-    def step(self):
-        self._solver.update()
-
-    def get_buffer(self):
-        self._to_buffer(self.rgb_buf, *self._solver.get_fields())
-        return self.rgb_buf
-
+class DyesFluidSimulator(FluidSimulator):
     @ti.kernel
     def _to_buffer(
         self, rgb_buf: ti.template(), dyes: ti.template(), v: ti.template(), p: ti.template()
