@@ -38,7 +38,7 @@ class BoundaryCondition:
     def _set_outflow_bc(self, vc, pc, bc_mask, i, j):
         if bc_mask[i, j] == 3:
             vc[i, j].x = min(max(vc[i - 1, j].x, 0.0), 10.0)  # 逆流しないようにする
-            vc[i, j].y = vc[i - 1, j].y
+            vc[i, j].y = min(max(vc[i - 1, j].y, -10.0), 10.0)
             pc[i, j] = 0.0
 
     @ti.func
@@ -114,6 +114,7 @@ class DyesBoundaryCondition(BoundaryCondition):
     def _set_indyes_bc(self, dyes, bc_dyes, bc_mask, i, j):
         if bc_mask[i, j] == 2:
             dyes[i, j] = bc_dyes[i, j]
+
 
 def create_boundary_condition1(resolution):
     # 1: 壁, 2: 流入部, 3: 流出部
@@ -227,8 +228,6 @@ def create_dyes_boundary_condition1(resolution):
     for i in range(0, resolution, 40):
         bc_dyes[0, i : i + 20] = np.array([1.0, 1.0, 0.2])
     bc_mask[0, :] = 2
-    # bc[0, resolution // 2 - 2 * size : resolution // 2 + 2 * size] = np.array([8.0, 0.0])
-    # bc_mask[0, resolution // 2 - 2 * size : resolution // 2 + 2 * size] = 2
 
     # 流出部の設定
     bc[-1, :] = np.array([10.0, 0.0])
