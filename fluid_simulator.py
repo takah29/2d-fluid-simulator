@@ -12,7 +12,7 @@ from boundary_condition import (
     create_dyes_boundary_condition3,
 )
 from advection import advect, advect_upwind, advect_kk_scheme, advect_eno
-from solver import MacSolver, FsSolver, DyesMacSolver
+from solver import MacSolver, FsSolver, DyesMacSolver, CipMacSolver
 from visualization import visualize_norm
 
 
@@ -50,7 +50,7 @@ class FluidSimulator:
         else:
             raise NotImplementedError
 
-        solver = MacSolver(boundary_condition, advect_kk_scheme, dt, re, 2)
+        solver = CipMacSolver(boundary_condition, dt, re, 2)
         return FluidSimulator(solver)
 
 

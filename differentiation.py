@@ -10,6 +10,11 @@ def sample(field, i, j):
 
 
 @ti.func
+def sign(x):
+    return -1.0 if x < 0.0 else 1.0
+
+
+@ti.func
 def fdiff_x(field, i, j):
     """Forward Difference x"""
     return sample(field, i + 1, j) - sample(field, i, j)

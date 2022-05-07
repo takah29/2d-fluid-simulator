@@ -4,6 +4,7 @@ import taichi as ti
 
 from differentiation import (
     sample,
+    sign,
     diff_x,
     diff_y,
     fdiff_x,
@@ -210,3 +211,169 @@ class DyesMacSolver(MacSolver):
         for i, j in dn:
             if not self._bc.is_wall(i, j):
                 dn[i, j] = ti.max(ti.min(dc[i, j] - self.dt * self._advect(vc, dc, i, j), 1.0), 0.0)
+
+
+@ti.data_oriented
+class CipMacSolver(Solver):
+    """Maker And Cell method"""
+
+    def __init__(self, boundary_condition, dt, Re, p_iter):
+        super().__init__(boundary_condition)
+        self.dt = dt
+        self.Re = Re
+
+        self.v = DoubleBuffers(self._resolution, 2)  # velocities
+        self.p = DoubleBuffers(self._resolution, 1)  # pressure
+        self.f = DoubleBuffers(self._resolution, 2)
+        self.fx = DoubleBuffers(self._resolution, 2)
+        self.fy = DoubleBuffers(self._resolution, 2)
+
+        self.p_iter = p_iter
+
+        # initial condition
+        self._initialize()
+
+    def _initialize(self):
+        self.v.current.fill(ti.Vector([0.4, 0.0]))
+        self.f.reset()
+        self.fx.reset()
+        self.fy.reset()
+
+        self._bc.calc(self.v.current, self.p.current)
+        self.f.current.copy_from(self.v.current)
+        self._calc_grad_x(self.fx.current, self.f.current)
+        self._calc_grad_y(self.fy.current, self.f.current)
+
+    def update(self):
+        self._bc.calc(self.f.current, self.p.current)
+        self._update_velocities(self.f, self.fx, self.fy, self.v, self.p)
+
+        self._bc.calc(self.f.current, self.p.current)
+        for _ in range(self.p_iter):
+            self._update_pressures(self.p.next, self.p.current, self.v.current)
+            self.p.swap()
+
+    def get_fields(self):
+        return self.v.current, self.p.current
+
+    def _update_velocities(self, f, fx, fy, v, p):
+        self._non_advection_phase(
+            f.next, fx.next, fy.next, f.current, fx.current, fy.current, p.current
+        )
+        f.swap()
+        fx.swap()
+        fy.swap()
+        self._advection_phase(
+            f.next, fx.next, fy.next, f.current, fx.current, fy.current, v.current
+        )
+        f.swap()
+        fx.swap()
+        fy.swap()
+        self.v.current.copy_from(self.f.current)
+
+    @ti.kernel
+    def _calc_grad_x(self, fx: ti.template(), f: ti.template()):
+        for i, j in fx:
+            if not self._bc.is_wall(i, j):
+                fx[i, j] = diff_x(f, i, j)
+
+    @ti.kernel
+    def _calc_grad_y(self, fy: ti.template(), f: ti.template()):
+        for i, j in fy:
+            if not self._bc.is_wall(i, j):
+                fy[i, j] = diff_y(f, i, j)
+
+    @ti.kernel
+    def _non_advection_phase(
+        self,
+        fn: ti.template(),
+        fxn: ti.template(),
+        fyn: ti.template(),
+        fc: ti.template(),
+        fxc: ti.template(),
+        fyc: ti.template(),
+        pc: ti.template(),
+    ):
+        """移流項の中間量の計算"""
+        for i, j in fn:
+            # 移流量の更新
+            if not self._bc.is_wall(i, j):
+                G = (
+                    -ti.Vector(
+                        [
+                            diff_x(pc, i, j),
+                            diff_y(pc, i, j),
+                        ]
+                    )
+                    + (diff2_x(fc, i, j) + diff2_y(fc, i, j)) / self.Re
+                )
+                fn[i, j] = fc[i, j] + G * self.dt
+
+                # 勾配の更新
+                fxn[i, j] = (
+                    fxc[i, j] + (fn[i + 1, j] - fc[i + 1, j] - fn[i - 1, j] + fc[i - 1, j]) / 2.0
+                )
+                fyn[i, j] = (
+                    fyc[i, j] + (fn[i, j + 1] - fc[i, j + 1] - fn[i, j - 1] + fc[i, j - 1]) / 2.0
+                )
+
+    @ti.kernel
+    def _advection_phase(
+        self,
+        fn: ti.template(),
+        fxn: ti.template(),
+        fyn: ti.template(),
+        fc: ti.template(),
+        fxc: ti.template(),
+        fyc: ti.template(),
+        vc: ti.template(),
+    ):
+        for i, j in fn:
+            if not self._bc.is_wall(i, j):
+                i_s = int(sign(vc[i, j].x))
+                j_s = int(sign(vc[i, j].y))
+                i_m = i - i_s
+                j_m = j - j_s
+                a = (i_s * (fxc[i_m, j] + fxc[i, j]) - 2.0 * (fc[i, j] - fc[i_m, j])) / float(i_s)
+                b = (j_s * (fyc[i, j_m] + fyc[i, j]) - 2.0 * (fc[i, j] - fc[i, j_m])) / float(j_s)
+                c = (
+                    -(fc[i, j] - fc[i, j_m] - fc[i_m, j] + fc[i_m, j_m])
+                    - i_s * (fxc[i, j_m] - fxc[i, j])
+                ) / float(j_s)
+                d = (
+                    -(fc[i, j] - fc[i, j_m] - fc[i_m, j] + fc[i_m, j_m])
+                    - j_s * (fyc[i_m, j] - fyc[i, j])
+                ) / float(i_s)
+                e = 3.0 * (fc[i_m, j] - fc[i, j]) + i_s * (fxc[i_m, j] + 2.0 * fxc[i, j])
+                f = 3.0 * (fc[i, j_m] - fc[i, j]) + j_s * (fyc[i, j_m] + 2.0 * fyc[i, j])
+                g = (-(fyc[i_m, j] - fyc[i, j]) + c) / float(i_s)
+                X = -vc[i, j].x * self.dt
+                Y = -vc[i, j].y * self.dt
+                fn[i, j] = (
+                    ((a * X + c * Y + e) * X + g * Y + fxc[i, j]) * X
+                    + ((b * Y + d * X + f) * Y + fyc[i, j]) * Y
+                    + fc[i, j]
+                )
+
+                # 勾配の更新
+                Fx = (3.0 * a * X + 2.0 * c * Y + 2.0 * e) * X + (d * Y + g) * Y + fxc[i, j]
+                Fy = (3.0 * b * Y + 2.0 * d * X + 2.0 * f) * Y + (c * X + g) * X + fyc[i, j]
+                fxn[i, j] = Fx - self.dt * (Fx * diff_x(vc, i, j).x + Fy * diff_x(vc, i, j).y) / 2.0
+                fyn[i, j] = Fy - self.dt * (Fx * diff_y(vc, i, j).x + Fy * diff_y(vc, i, j).y) / 2.0
+
+    @ti.kernel
+    def _update_pressures(self, pn: ti.template(), pc: ti.template(), vc: ti.template()):
+        for i, j in pn:
+            if not self._bc.is_wall(i, j):
+                pn[i, j] = (
+                    (
+                        sample(pc, i + 1, j)
+                        + sample(pc, i - 1, j)
+                        + sample(pc, i, j + 1)
+                        + sample(pc, i, j - 1)
+                    )
+                    - (diff_x(vc, i, j).x + diff_y(vc, i, j).y) / self.dt
+                    + diff_x(vc, i, j).x ** 2
+                    + diff_y(vc, i, j).y ** 2
+                    + 2 * diff_y(vc, i, j).x * diff_x(vc, i, j).y
+                ) * 0.25
