@@ -377,3 +377,62 @@ class CipMacSolver(Solver):
                     + diff_y(vc, i, j).y ** 2
                     + 2 * diff_y(vc, i, j).x * diff_x(vc, i, j).y
                 ) * 0.25
+
+
+@ti.data_oriented
+class DyesCipMacSolver(CipMacSolver):
+    """Maker And Cell method"""
+
+    def __init__(self, boundary_condition, advect_function, dt, Re, p_iter):
+        self.dyes = DoubleBuffers(boundary_condition.get_resolution(), 3)  # dyes
+        self._advect = advect_function
+        super().__init__(boundary_condition, dt, Re, p_iter)
+
+
+    def _initialize(self):
+        self.v.current.fill(ti.Vector([0.4, 0.0]))
+        self.f.reset()
+        self.fx.reset()
+        self.fy.reset()
+
+        self._bc.calc(self.v.current, self.p.current, self.dyes.current)
+        self.f.current.copy_from(self.v.current)
+        self._calc_grad_x(self.fx.current, self.f.current)
+        self._calc_grad_y(self.fy.current, self.f.current)
+
+    def update(self):
+        self._bc.calc(self.f.current, self.p.current, self.dyes.current)
+        self._update_velocities(self.f, self.fx, self.fy, self.v, self.p)
+
+        self._bc.calc(self.f.current, self.p.current, self.dyes.current)
+        for _ in range(self.p_iter):
+            self._update_pressures(self.p.next, self.p.current, self.v.current)
+            self.p.swap()
+
+        self._bc.calc(self.v.current, self.p.current, self.dyes.current)
+        self._update_dyes(self.dyes.next, self.dyes.current, self.v.current)
+        self.dyes.swap()
+
+    def get_fields(self):
+        return self.dyes.current, self.v.current, self.p.current
+
+    def _update_velocities(self, f, fx, fy, v, p):
+        self._non_advection_phase(
+            f.next, fx.next, fy.next, f.current, fx.current, fy.current, p.current
+        )
+        f.swap()
+        fx.swap()
+        fy.swap()
+        self._advection_phase(
+            f.next, fx.next, fy.next, f.current, fx.current, fy.current, v.current
+        )
+        f.swap()
+        fx.swap()
+        fy.swap()
+        self.v.current.copy_from(self.f.current)
+
+    @ti.kernel
+    def _update_dyes(self, dn: ti.template(), dc: ti.template(), vc: ti.template()):
+        for i, j in dn:
+            if not self._bc.is_wall(i, j):
+                dn[i, j] = ti.max(ti.min(dc[i, j] - self.dt * self._advect(vc, dc, i, j), 1.0), 0.0)

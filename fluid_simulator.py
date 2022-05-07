@@ -12,7 +12,7 @@ from boundary_condition import (
     create_dyes_boundary_condition3,
 )
 from advection import advect, advect_upwind, advect_kk_scheme, advect_eno
-from solver import MacSolver, FsSolver, DyesMacSolver, CipMacSolver
+from solver import MacSolver, FsSolver, DyesMacSolver, CipMacSolver, DyesCipMacSolver
 from visualization import visualize_norm
 
 
@@ -62,8 +62,8 @@ class DyesFluidSimulator(FluidSimulator):
     ):
         for i, j in rgb_buf:
             rgb_buf[i, j] = dyes[i, j]
-            c = 0.001 * p[i, j]
-            rgb_buf[i, j] += ti.Vector([c, c, c])
+            # c = 0.001 * p[i, j]
+            # rgb_buf[i, j] += ti.Vector([c, c, c])
             if self._solver.is_wall(i, j):
                 rgb_buf[i, j].x = 0.5
                 rgb_buf[i, j].y = 0.7
@@ -80,5 +80,5 @@ class DyesFluidSimulator(FluidSimulator):
         else:
             raise NotImplementedError
 
-        solver = DyesMacSolver(boundary_condition, advect_kk_scheme, dt, re, 2)
+        solver = DyesCipMacSolver(boundary_condition, advect_kk_scheme, dt, re, 2)
         return DyesFluidSimulator(solver)

@@ -13,8 +13,8 @@ def main():
     canvas = window.get_canvas()
 
     dt = 0.01
-    re = 2000
-    fluid_sim = FluidSimulator.create(3, resolution, dt, re)
+    re = 1e32
+    fluid_sim = DyesFluidSimulator.create(2, resolution, dt, re)
 
     # video_manager = ti.tools.VideoManager(output_dir="result", framerate=60, automatic_build=False)
 
