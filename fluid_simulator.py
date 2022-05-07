@@ -11,8 +11,8 @@ from boundary_condition import (
     create_dyes_boundary_condition2,
     create_dyes_boundary_condition3,
 )
-from advection import advect, advect_upwind, advect_kk_scheme, advect_eno
-from solver import MacSolver, FsSolver, DyesMacSolver, CipMacSolver, DyesCipMacSolver
+from advection import advect, advect_upwind, advect_kk_scheme
+from solver import MacSolver, DyesMacSolver, CipMacSolver, DyesCipMacSolver
 from visualization import visualize_norm
 
 
