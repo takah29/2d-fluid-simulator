@@ -334,21 +334,22 @@ class CipMacSolver(Solver):
                 j_s = int(sign(vc[i, j].y))
                 i_m = i - i_s
                 j_m = j - j_s
-                a = (i_s * (fxc[i_m, j] + fxc[i, j]) - 2.0 * (fc[i, j] - fc[i_m, j])) / float(i_s)
-                b = (j_s * (fyc[i, j_m] + fyc[i, j]) - 2.0 * (fc[i, j] - fc[i, j_m])) / float(j_s)
-                c = (
-                    -(fc[i, j] - fc[i, j_m] - fc[i_m, j] + fc[i_m, j_m])
-                    - i_s * (fxc[i, j_m] - fxc[i, j])
-                ) / float(j_s)
-                d = (
-                    -(fc[i, j] - fc[i, j_m] - fc[i_m, j] + fc[i_m, j_m])
-                    - j_s * (fyc[i_m, j] - fyc[i, j])
-                ) / float(i_s)
-                e = 3.0 * (fc[i_m, j] - fc[i, j]) + i_s * (fxc[i_m, j] + 2.0 * fxc[i, j])
-                f = 3.0 * (fc[i, j_m] - fc[i, j]) + j_s * (fyc[i, j_m] + 2.0 * fyc[i, j])
-                g = (-(fyc[i_m, j] - fyc[i, j]) + c) / float(i_s)
+
+                tmp1 = fc[i, j] - fc[i, j_m] - fc[i_m, j] + fc[i_m, j_m]
+                tmp2 = fc[i_m, j] - fc[i, j]
+                tmp3 = fc[i, j_m] - fc[i, j]
+
+                a = (i_s * (fxc[i_m, j] + fxc[i, j]) - 2.0 * (-tmp2)) / i_s
+                b = (j_s * (fyc[i, j_m] + fyc[i, j]) - 2.0 * (-tmp3)) / j_s
+                c = (-tmp1 - i_s * (fxc[i, j_m] - fxc[i, j])) / j_s
+                d = (-tmp1 - j_s * (fyc[i_m, j] - fyc[i, j])) / i_s
+                e = 3.0 * tmp2 + i_s * (fxc[i_m, j] + 2.0 * fxc[i, j])
+                f = 3.0 * tmp3 + j_s * (fyc[i, j_m] + 2.0 * fyc[i, j])
+                g = (-(fyc[i_m, j] - fyc[i, j]) + c) / i_s
+
                 X = -vc[i, j].x * self.dt
                 Y = -vc[i, j].y * self.dt
+
                 fn[i, j] = (
                     ((a * X + c * Y + e) * X + g * Y + fxc[i, j]) * X
                     + ((b * Y + d * X + f) * Y + fyc[i, j]) * Y
@@ -358,6 +359,7 @@ class CipMacSolver(Solver):
                 # 勾配の更新
                 Fx = (3.0 * a * X + 2.0 * c * Y + 2.0 * e) * X + (d * Y + g) * Y + fxc[i, j]
                 Fy = (3.0 * b * Y + 2.0 * d * X + 2.0 * f) * Y + (c * X + g) * X + fyc[i, j]
+
                 fxn[i, j] = Fx - self.dt * (Fx * diff_x(vc, i, j).x + Fy * diff_x(vc, i, j).y) / 2.0
                 fyn[i, j] = Fy - self.dt * (Fx * diff_y(vc, i, j).x + Fy * diff_y(vc, i, j).y) / 2.0
 
@@ -388,7 +390,6 @@ class DyesCipMacSolver(CipMacSolver):
         self._advect = advect_function
         super().__init__(boundary_condition, dt, Re, p_iter)
 
-
     def _initialize(self):
         self.v.current.fill(ti.Vector([0.4, 0.0]))
         self.f.reset()
@@ -415,21 +416,6 @@ class DyesCipMacSolver(CipMacSolver):
 
     def get_fields(self):
         return self.dyes.current, self.v.current, self.p.current
-
-    def _update_velocities(self, f, fx, fy, v, p):
-        self._non_advection_phase(
-            f.next, fx.next, fy.next, f.current, fx.current, fy.current, p.current
-        )
-        f.swap()
-        fx.swap()
-        fy.swap()
-        self._advection_phase(
-            f.next, fx.next, fy.next, f.current, fx.current, fy.current, v.current
-        )
-        f.swap()
-        fx.swap()
-        fy.swap()
-        self.v.current.copy_from(self.f.current)
 
     @ti.kernel
     def _update_dyes(self, dn: ti.template(), dc: ti.template(), vc: ti.template()):
