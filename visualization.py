@@ -12,9 +12,14 @@ def visualize_norm(vec):
 
 
 @ti.func
+def visualize_pressure(val):
+    return ti.Vector([max(val, 0.0), 0.0, max(-val, 0.0)])
+
+
+@ti.func
 def visualize_vorticity(v, i, j):
-    c = diff_x(v, i, j).y - diff_y(v, i, j).x
-    return ti.Vector([max(c, 0.0), 0.0, max(-c, 0.0)])
+    val = diff_x(v, i, j).y - diff_y(v, i, j).x
+    return ti.Vector([max(val, 0.0), 0.0, max(-val, 0.0)])
 
 
 @ti.func

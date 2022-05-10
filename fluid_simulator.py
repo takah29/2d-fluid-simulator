@@ -13,7 +13,7 @@ from boundary_condition import (
 )
 from advection import advect, advect_upwind, advect_kk_scheme
 from solver import MacSolver, DyesMacSolver, CipMacSolver, DyesCipMacSolver
-from visualization import visualize_norm, visualize_vorticity
+from visualization import visualize_norm, visualize_pressure, visualize_vorticity
 
 
 @ti.data_oriented
@@ -30,6 +30,10 @@ class FluidSimulator:
         self._to_norm(self.rgb_buf, *self._solver.get_fields()[:2])
         return self.rgb_buf
 
+    def get_pressure_field(self):
+        self._to_pressure(self.rgb_buf, self._solver.get_fields()[1])
+        return self.rgb_buf
+
     def get_vorticity_field(self):
         self._to_vorticity(self.rgb_buf, self._solver.get_fields()[0])
         return self.rgb_buf
@@ -38,7 +42,14 @@ class FluidSimulator:
     def _to_norm(self, rgb_buf: ti.template(), vc: ti.template(), pc: ti.template()):
         for i, j in rgb_buf:
             rgb_buf[i, j] = 0.05 * visualize_norm(vc[i, j])
-            rgb_buf[i, j].x += 0.001 * pc[i, j]
+            rgb_buf[i, j] += 0.002 * visualize_pressure(pc[i, j])
+            if self._solver.is_wall(i, j):
+                rgb_buf[i, j] = self._wall_color
+
+    @ti.kernel
+    def _to_pressure(self, rgb_buf: ti.template(), pc: ti.template()):
+        for i, j in rgb_buf:
+            rgb_buf[i, j] = 0.02 * visualize_pressure(pc[i, j])
             if self._solver.is_wall(i, j):
                 rgb_buf[i, j] = self._wall_color
 

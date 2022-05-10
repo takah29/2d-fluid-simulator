@@ -13,7 +13,7 @@ def main():
     canvas = window.get_canvas()
 
     dt = 0.01
-    re = 1e32
+    re = 1e8
     fluid_sim = DyesFluidSimulator.create(2, resolution, dt, re)
 
     # video_manager = ti.tools.VideoManager(output_dir="result", framerate=60, automatic_build=False)
@@ -28,7 +28,7 @@ def main():
             elif e.key == "p":
                 paused = not paused
             elif e.key == "v":
-                visualize_num = (visualize_num + 1) % 3
+                visualize_num = (visualize_num + 1) % 4
 
         if not paused:
             fluid_sim.step()
@@ -36,9 +36,11 @@ def main():
         if visualize_num == 0:
             img = fluid_sim.get_norm_field()
         elif visualize_num == 1:
-            img = fluid_sim.get_dye_field()
+            img = fluid_sim.get_pressure_field()
         elif visualize_num == 2:
             img = fluid_sim.get_vorticity_field()
+        elif visualize_num == 3:
+            img = fluid_sim.get_dye_field()
         else:
             raise NotImplementedError()
 
