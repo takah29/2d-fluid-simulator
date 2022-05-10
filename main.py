@@ -30,12 +30,14 @@ def main():
         if not paused:
             fluid_sim.step()
 
-        img = fluid_sim.get_buffer()
+        img = fluid_sim.get_norm_field()
 
         if count % 10 == 0:
             canvas.set_image(img)
             window.show()
-            # video_manager.write_frame(img)
+
+        # if count % 50 == 0:
+        #     video_manager.write_frame(img)
 
         count += 1
 

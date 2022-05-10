@@ -2,11 +2,19 @@ from math import pi, e
 
 import taichi as ti
 
+from differentiation import diff_x, diff_y
+
 
 @ti.func
 def visualize_norm(vec):
     c = ti.sqrt(vec.dot(vec))
     return ti.Vector([c, c, c])
+
+
+@ti.func
+def visualize_vorticity(v, i, j):
+    c = diff_x(v, i, j).y - diff_y(v, i, j).x
+    return ti.Vector([max(c, 0.0), 0.0, max(-c, 0.0)])
 
 
 @ti.func

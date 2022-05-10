@@ -13,7 +13,7 @@ from boundary_condition import (
 )
 from advection import advect, advect_upwind, advect_kk_scheme
 from solver import MacSolver, DyesMacSolver, CipMacSolver, DyesCipMacSolver
-from visualization import visualize_norm
+from visualization import visualize_norm, visualize_vorticity
 
 
 @ti.data_oriented
@@ -21,23 +21,33 @@ class FluidSimulator:
     def __init__(self, solver):
         self._solver = solver
         self.rgb_buf = ti.Vector.field(3, float, shape=solver._resolution)  # image buffer
+        self._wall_color = ti.Vector([0.5, 0.7, 0.5])
 
     def step(self):
         self._solver.update()
 
-    def get_buffer(self):
-        self._to_buffer(self.rgb_buf, *self._solver.get_fields())
+    def get_norm_field(self):
+        self._to_norm(self.rgb_buf, *self._solver.get_fields()[:2])
+        return self.rgb_buf
+
+    def get_vorticity_field(self):
+        self._to_vorticity(self.rgb_buf, self._solver.get_fields()[0])
         return self.rgb_buf
 
     @ti.kernel
-    def _to_buffer(self, rgb_buf: ti.template(), vc: ti.template(), pc: ti.template()):
+    def _to_norm(self, rgb_buf: ti.template(), vc: ti.template(), pc: ti.template()):
         for i, j in rgb_buf:
             rgb_buf[i, j] = 0.05 * visualize_norm(vc[i, j])
             rgb_buf[i, j].x += 0.001 * pc[i, j]
             if self._solver.is_wall(i, j):
-                rgb_buf[i, j].x = 0.5
-                rgb_buf[i, j].y = 0.7
-                rgb_buf[i, j].z = 0.5
+                rgb_buf[i, j] = self._wall_color
+
+    @ti.kernel
+    def _to_vorticity(self, rgb_buf: ti.template(), vc: ti.template()):
+        for i, j in rgb_buf:
+            rgb_buf[i, j] = 0.5 * visualize_vorticity(vc, i, j)
+            if self._solver.is_wall(i, j):
+                rgb_buf[i, j] = self._wall_color
 
     @staticmethod
     def create(num, resolution, dt, re):
@@ -56,18 +66,18 @@ class FluidSimulator:
 
 @ti.data_oriented
 class DyesFluidSimulator(FluidSimulator):
+    def get_dye_field(self):
+        self._to_dye(self.rgb_buf, *self._solver.get_fields())
+        return self.rgb_buf
+
     @ti.kernel
-    def _to_buffer(
-        self, rgb_buf: ti.template(), dyes: ti.template(), v: ti.template(), p: ti.template()
+    def _to_dye(
+        self, rgb_buf: ti.template(), v: ti.template(), p: ti.template(), dyes: ti.template()
     ):
         for i, j in rgb_buf:
             rgb_buf[i, j] = dyes[i, j]
-            # c = 0.001 * p[i, j]
-            # rgb_buf[i, j] += ti.Vector([c, c, c])
             if self._solver.is_wall(i, j):
-                rgb_buf[i, j].x = 0.5
-                rgb_buf[i, j].y = 0.7
-                rgb_buf[i, j].z = 0.5
+                rgb_buf[i, j] = self._wall_color
 
     @staticmethod
     def create(num, resolution, dt, re):

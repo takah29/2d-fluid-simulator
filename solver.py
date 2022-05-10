@@ -204,7 +204,7 @@ class DyesMacSolver(MacSolver):
         self.dyes.swap()
 
     def get_fields(self):
-        return self.dyes.current, self.v.current, self.p.current
+        return self.v.current, self.p.current, self.dyes.current
 
     @ti.kernel
     def _update_dyes(self, dn: ti.template(), dc: ti.template(), vc: ti.template()):
@@ -415,7 +415,7 @@ class DyesCipMacSolver(CipMacSolver):
         self.dyes.swap()
 
     def get_fields(self):
-        return self.dyes.current, self.v.current, self.p.current
+        return self.v.current, self.p.current, self.dyes.current
 
     @ti.kernel
     def _update_dyes(self, dn: ti.template(), dc: ti.template(), vc: ti.template()):
