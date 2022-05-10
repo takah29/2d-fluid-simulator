@@ -6,7 +6,7 @@ def main():
     arch = ti.vulkan if ti._lib.core.with_vulkan() else ti.cuda
     ti.init(arch=arch)
 
-    resolution = 400
+    resolution = 800
     paused = False
 
     window = ti.ui.Window("Fluid Simulation", (2 * resolution, resolution), vsync=False)
@@ -19,6 +19,7 @@ def main():
     # video_manager = ti.tools.VideoManager(output_dir="result", framerate=60, automatic_build=False)
 
     count = 0
+    visualize_num = 0
     while window.running:
         if window.get_event(ti.ui.PRESS):
             e = window.event
@@ -26,11 +27,20 @@ def main():
                 break
             elif e.key == "p":
                 paused = not paused
+            elif e.key == "v":
+                visualize_num = (visualize_num + 1) % 3
 
         if not paused:
             fluid_sim.step()
 
-        img = fluid_sim.get_norm_field()
+        if visualize_num == 0:
+            img = fluid_sim.get_norm_field()
+        elif visualize_num == 1:
+            img = fluid_sim.get_dye_field()
+        elif visualize_num == 2:
+            img = fluid_sim.get_vorticity_field()
+        else:
+            raise NotImplementedError()
 
         if count % 10 == 0:
             canvas.set_image(img)
