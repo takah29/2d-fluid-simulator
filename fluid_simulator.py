@@ -7,9 +7,11 @@ from boundary_condition import (
     create_boundary_condition1,
     create_boundary_condition2,
     create_boundary_condition3,
+    create_boundary_condition4,
     create_dyes_boundary_condition1,
     create_dyes_boundary_condition2,
     create_dyes_boundary_condition3,
+    create_dyes_boundary_condition4,
 )
 from advection import advect, advect_upwind, advect_kk_scheme
 from solver import MacSolver, DyesMacSolver, CipMacSolver, DyesCipMacSolver
@@ -68,6 +70,8 @@ class FluidSimulator:
             boundary_condition = create_boundary_condition2(resolution)
         elif num == 3:
             boundary_condition = create_boundary_condition3(resolution)
+        elif num == 4:
+            boundary_condition = create_boundary_condition4(resolution)
         else:
             raise NotImplementedError
 
@@ -98,6 +102,8 @@ class DyesFluidSimulator(FluidSimulator):
             boundary_condition = create_dyes_boundary_condition2(resolution)
         elif num == 3:
             boundary_condition = create_dyes_boundary_condition3(resolution)
+        elif num == 4:
+            boundary_condition = create_dyes_boundary_condition4(resolution)
         else:
             raise NotImplementedError
 
