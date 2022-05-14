@@ -222,11 +222,10 @@ class CipMacSolver(Solver):
         self.dt = dt
         self.Re = Re
 
-        self.v = DoubleBuffers(self._resolution, 2)  # velocities
         self.p = DoubleBuffers(self._resolution, 1)  # pressure
-        self.f = DoubleBuffers(self._resolution, 2)
-        self.fx = DoubleBuffers(self._resolution, 2)
-        self.fy = DoubleBuffers(self._resolution, 2)
+        self.v = DoubleBuffers(self._resolution, 2)
+        self.vx = DoubleBuffers(self._resolution, 2)
+        self.vy = DoubleBuffers(self._resolution, 2)
 
         self.p_iter = p_iter
 
@@ -235,20 +234,18 @@ class CipMacSolver(Solver):
 
     def _initialize(self):
         self.v.current.fill(ti.Vector([0.4, 0.0]))
-        self.f.reset()
-        self.fx.reset()
-        self.fy.reset()
+        self.vx.reset()
+        self.vy.reset()
 
         self._bc.calc(self.v.current, self.p.current)
-        self.f.current.copy_from(self.v.current)
-        self._calc_grad_x(self.fx.current, self.f.current)
-        self._calc_grad_y(self.fy.current, self.f.current)
+        self._calc_grad_x(self.vx.current, self.v.current)
+        self._calc_grad_y(self.vy.current, self.v.current)
 
     def update(self):
-        self._bc.calc(self.f.current, self.p.current)
-        self._update_velocities(self.f, self.fx, self.fy, self.v, self.p)
+        self._bc.calc(self.v.current, self.p.current)
+        self._update_velocities(self.v, self.vx, self.vy, self.p)
 
-        self._bc.calc(self.f.current, self.p.current)
+        self._bc.calc(self.v.current, self.p.current)
         for _ in range(self.p_iter):
             self._update_pressures(self.p.next, self.p.current, self.v.current)
             self.p.swap()
@@ -268,19 +265,18 @@ class CipMacSolver(Solver):
             if not self._bc.is_wall(i, j):
                 fy[i, j] = diff_y(f, i, j)
 
-    def _update_velocities(self, f, fx, fy, v, p):
-        self._non_advection_phase(f.next, f.current, p.current)
-        self._non_advection_phase_grad(fx.next, fy.next, fx.current, fy.current, f.current, f.next)
-        f.swap()
-        fx.swap()
-        fy.swap()
+    def _update_velocities(self, v, vx, vy, p):
+        self._non_advection_phase(v.next, v.current, p.current)
+        self._non_advection_phase_grad(vx.next, vy.next, vx.current, vy.current, v.current, v.next)
+        v.swap()
+        vx.swap()
+        vy.swap()
         self._advection_phase(
-            f.next, fx.next, fy.next, f.current, fx.current, fy.current, v.current
+            v.next, vx.next, vy.next, v.current, vx.current, vy.current, v.current
         )
-        f.swap()
-        fx.swap()
-        fy.swap()
-        self.v.current.copy_from(self.f.current)
+        v.swap()
+        vx.swap()
+        vy.swap()
 
     @ti.kernel
     def _non_advection_phase(
@@ -324,7 +320,7 @@ class CipMacSolver(Solver):
                 )
 
     @ti.func
-    def _cip_non_advect(self, fn, fxn, fyn, fc, fxc, fyc, pc, i, j):
+    def _cip_non_advect(self, fn, fc, pc, i, j):
         G = -ti.Vector(
             [
                 diff_x(pc, i, j),
@@ -346,16 +342,20 @@ class CipMacSolver(Solver):
         fc: ti.template(),
         fxc: ti.template(),
         fyc: ti.template(),
-        vc: ti.template(),
+        v: ti.template(),
     ):
         for i, j in fn:
             if not self._bc.is_wall(i, j):
-                self._cip_advect(fn, fxn, fyn, fc, fxc, fyc, vc, i, j)
+                self._cip_advect(fn, fxn, fyn, fc, fxc, fyc, v, i, j)
+
+    # @ti.kernel
+    # def _vorticity_confinement(self, vn:ti.template(), vc:ti.template()):
+    #     for
 
     @ti.func
-    def _cip_advect(self, fn, fxn, fyn, fc, fxc, fyc, vc, i, j):
-        i_s = int(sign(vc[i, j].x))
-        j_s = int(sign(vc[i, j].y))
+    def _cip_advect(self, fn, fxn, fyn, fc, fxc, fyc, v, i, j):
+        i_s = int(sign(v[i, j].x))
+        j_s = int(sign(v[i, j].y))
         i_m = i - i_s
         j_m = j - j_s
 
@@ -371,8 +371,8 @@ class CipMacSolver(Solver):
         f = 3.0 * tmp3 + j_s * (fyc[i, j_m] + 2.0 * fyc[i, j])
         g = (-(fyc[i_m, j] - fyc[i, j]) + c) / i_s
 
-        X = -vc[i, j].x * self.dt
-        Y = -vc[i, j].y * self.dt
+        X = -v[i, j].x * self.dt
+        Y = -v[i, j].y * self.dt
 
         fn[i, j] = (
             ((a * X + c * Y + e) * X + g * Y + fxc[i, j]) * X
@@ -384,11 +384,11 @@ class CipMacSolver(Solver):
         Fx = (3.0 * a * X + 2.0 * c * Y + 2.0 * e) * X + (d * Y + g) * Y + fxc[i, j]
         Fy = (3.0 * b * Y + 2.0 * d * X + 2.0 * f) * Y + (c * X + g) * X + fyc[i, j]
 
-        fxn[i, j] = Fx - self.dt * (Fx * diff_x(vc, i, j).x + Fy * diff_x(vc, i, j).y) / 2.0
-        fyn[i, j] = Fy - self.dt * (Fx * diff_y(vc, i, j).x + Fy * diff_y(vc, i, j).y) / 2.0
+        fxn[i, j] = Fx - self.dt * (Fx * diff_x(v, i, j).x + Fy * diff_x(v, i, j).y) / 2.0
+        fyn[i, j] = Fy - self.dt * (Fx * diff_y(v, i, j).x + Fy * diff_y(v, i, j).y) / 2.0
 
     @ti.kernel
-    def _update_pressures(self, pn: ti.template(), pc: ti.template(), vc: ti.template()):
+    def _update_pressures(self, pn: ti.template(), pc: ti.template(), fc: ti.template()):
         for i, j in pn:
             if not self._bc.is_wall(i, j):
                 pn[i, j] = (
@@ -398,10 +398,10 @@ class CipMacSolver(Solver):
                         + sample(pc, i, j + 1)
                         + sample(pc, i, j - 1)
                     )
-                    - (diff_x(vc, i, j).x + diff_y(vc, i, j).y) / self.dt
-                    + diff_x(vc, i, j).x ** 2
-                    + diff_y(vc, i, j).y ** 2
-                    + 2 * diff_y(vc, i, j).x * diff_x(vc, i, j).y
+                    - (diff_x(fc, i, j).x + diff_y(fc, i, j).y) / self.dt
+                    + diff_x(fc, i, j).x ** 2
+                    + diff_y(fc, i, j).y ** 2
+                    + 2 * diff_y(fc, i, j).x * diff_x(fc, i, j).y
                 ) * 0.25
 
 
@@ -418,26 +418,24 @@ class DyesCipMacSolver(CipMacSolver):
 
     def _initialize(self):
         self.v.current.fill(ti.Vector([0.4, 0.0]))
-        self.f.reset()
-        self.fx.reset()
-        self.fy.reset()
+        self.vx.reset()
+        self.vy.reset()
         self.dyes.reset()
         self.dyesx.reset()
         self.dyesy.reset()
 
         self._bc.calc(self.v.current, self.p.current, self.dyes.current)
-        self.f.current.copy_from(self.v.current)
-        self._calc_grad_x(self.fx.current, self.f.current)
-        self._calc_grad_y(self.fy.current, self.f.current)
+        self._calc_grad_x(self.vx.current, self.v.current)
+        self._calc_grad_y(self.vy.current, self.v.current)
 
         self._calc_grad_x(self.dyesx.current, self.dyes.current)
         self._calc_grad_y(self.dyesy.current, self.dyes.current)
 
     def update(self):
-        self._bc.calc(self.f.current, self.p.current, self.dyes.current)
-        self._update_velocities(self.f, self.fx, self.fy, self.v, self.p)
+        self._bc.calc(self.v.current, self.p.current, self.dyes.current)
+        self._update_velocities(self.v, self.vx, self.vy, self.p)
 
-        self._bc.calc(self.f.current, self.p.current, self.dyes.current)
+        self._bc.calc(self.v.current, self.p.current, self.dyes.current)
         for _ in range(self.p_iter):
             self._update_pressures(self.p.next, self.p.current, self.v.current)
             self.p.swap()
