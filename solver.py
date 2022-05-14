@@ -295,14 +295,12 @@ class CipMacSolver(Solver):
     @ti.kernel
     def _calc_grad_x(self, fx: ti.template(), f: ti.template()):
         for i, j in fx:
-            if not self._bc.is_wall(i, j):
-                fx[i, j] = diff_x(f, i, j)
+            fx[i, j] = diff_x(f, i, j)
 
     @ti.kernel
     def _calc_grad_y(self, fy: ti.template(), f: ti.template()):
         for i, j in fy:
-            if not self._bc.is_wall(i, j):
-                fy[i, j] = diff_y(f, i, j)
+            fy[i, j] = diff_y(f, i, j)
 
     def _update_velocities(self, v, vx, vy, p):
         self._non_advection_phase(v.next, v.current, p.current)
@@ -459,6 +457,7 @@ class DyeCipMacSolver(CipMacSolver):
         self.dyex.reset()
         self.dyey.reset()
 
+        self.dye.current.copy_from(self._bc._bc_dye)
         self._bc.calc(self.v.current, self.p.current, self.dye.current)
         self._calc_grad_x(self.vx.current, self.v.current)
         self._calc_grad_y(self.vy.current, self.v.current)

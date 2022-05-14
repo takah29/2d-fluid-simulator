@@ -75,7 +75,7 @@ class FluidSimulator:
         else:
             raise NotImplementedError
 
-        solver = CipMacSolver(boundary_condition, dt, re, 2, vor_epsilon=2.0)
+        solver = CipMacSolver(boundary_condition, dt, re, 2, vor_epsilon=1.0)
         return FluidSimulator(solver)
 
 
@@ -107,5 +107,5 @@ class DyeFluidSimulator(FluidSimulator):
         else:
             raise NotImplementedError
 
-        solver = DyeCipMacSolver(boundary_condition, dt, re, 2, vor_epsilon=2.0)
+        solver = DyeCipMacSolver(boundary_condition, dt, re, 2, vor_epsilon=1.0)
         return DyeFluidSimulator(solver)
