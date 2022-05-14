@@ -278,9 +278,9 @@ def create_dye_boundary_condition2(resolution):
 
     # 流入部の設定
     y_point = resolution // 6
-    bc[:2, 2 * y_point : 4 * y_point] = np.array([6.0, 0.0])
-    bc_mask[:2, 2 * y_point : 4 * y_point] = 2
-    bc_dye[:2, 2 * y_point : 4 * y_point] = np.array([0.2, 0.2, 1.2])
+    bc[:2, :] = np.array([6.0, 0.0])
+    bc_mask[:2, :] = 2
+    bc_dye[:2, :] = np.array([0.2, 0.2, 1.2])
     width = resolution // 10
     for i in range(0, resolution, width):
         bc_dye[:2, i : i + width // 2] = np.array([1.2, 1.2, 0.2])
@@ -289,8 +289,10 @@ def create_dye_boundary_condition2(resolution):
     size = resolution // 32  # 壁幅
     bc[:2, : resolution // 3] = np.array([0.0, 0.0])
     bc_mask[:2, : resolution // 3] = 1
+    bc_dye[:2, : resolution // 3] = np.zeros(3)
     bc[:2, -resolution // 3 :] = np.array([0.0, 0.0])
     bc_mask[:2, -resolution // 3 :] = 1
+    bc_dye[:2, -resolution // 3 :] = np.zeros(3)
     bc[-2:, :] = np.array([0.0, 0.0])
     bc_mask[-2:, :] = 1
     bc[:, :2] = np.array([0.0, 0.0])
@@ -300,6 +302,7 @@ def create_dye_boundary_condition2(resolution):
 
     x_point = 2 * resolution // 5
     y_point = resolution // 2
+    size = resolution // 32  # 壁幅
     # 左
     bc[x_point - size : x_point + size, y_point:] = np.array([0.0, 0.0])
     bc_mask[x_point - size : x_point + size, y_point:] = 1
