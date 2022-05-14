@@ -7,7 +7,7 @@ from differentiation import diff_x, diff_y
 
 @ti.func
 def visualize_norm(vec):
-    c = ti.sqrt(vec.dot(vec))
+    c = vec.norm()
     return ti.Vector([c, c, c])
 
 
