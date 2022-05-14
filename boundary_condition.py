@@ -82,38 +82,38 @@ class BoundaryCondition:
                     bc_mask[i, j] = 1
 
 
-class DyesBoundaryCondition(BoundaryCondition):
-    def __init__(self, bc_const, bc_dyes, bc_mask):
-        self._bc_const, self._bc_dyes, self._bc_mask = DyesBoundaryCondition._to_field(
-            bc_const, bc_dyes, bc_mask
+class DyeBoundaryCondition(BoundaryCondition):
+    def __init__(self, bc_const, bc_dye, bc_mask):
+        self._bc_const, self._bc_dye, self._bc_mask = DyeBoundaryCondition._to_field(
+            bc_const, bc_dye, bc_mask
         )
 
     @ti.kernel
-    def calc(self, vc: ti.template(), pc: ti.template(), dyes: ti.template()):
-        bc_const, bc_dyes, bc_mask = ti.static(self._bc_const, self._bc_dyes, self._bc_mask)
+    def calc(self, vc: ti.template(), pc: ti.template(), dye: ti.template()):
+        bc_const, bc_dye, bc_mask = ti.static(self._bc_const, self._bc_dye, self._bc_mask)
         for i, j in vc:
             self._set_wall_bc(vc, bc_const, bc_mask, i, j)
             self._set_inflow_bc(vc, bc_const, bc_mask, i, j)
-            self._set_indyes_bc(dyes, bc_dyes, bc_mask, i, j)
+            self._set_indye_bc(dye, bc_dye, bc_mask, i, j)
             self._set_outflow_bc(vc, pc, bc_mask, i, j)
             if 0 < i < vc.shape[0] and 0 < j < vc.shape[1]:
                 self._set_inside_wall_bc(vc, pc, bc_mask, i, j)
 
     @staticmethod
-    def _to_field(bc, bc_dyes, bc_mask):
+    def _to_field(bc, bc_dye, bc_mask):
         bc_field = ti.Vector.field(2, ti.types.f64, shape=(bc.shape[0], bc.shape[1]))
         bc_field.from_numpy(bc)
-        bc_dyes_field = ti.Vector.field(3, ti.types.f64, shape=(bc_dyes.shape[0], bc_dyes.shape[1]))
-        bc_dyes_field.from_numpy(bc_dyes)
+        bc_dye_field = ti.Vector.field(3, ti.types.f64, shape=(bc_dye.shape[0], bc_dye.shape[1]))
+        bc_dye_field.from_numpy(bc_dye)
         bc_mask_field = ti.field(ti.types.u8, shape=(bc_mask.shape[0], bc_mask.shape[1]))
         bc_mask_field.from_numpy(bc_mask)
 
-        return bc_field, bc_dyes_field, bc_mask_field
+        return bc_field, bc_dye_field, bc_mask_field
 
     @ti.func
-    def _set_indyes_bc(self, dyes, bc_dyes, bc_mask, i, j):
+    def _set_indye_bc(self, dye, bc_dye, bc_mask, i, j):
         if bc_mask[i, j] == 2:
-            dyes[i, j] = bc_dyes[i, j]
+            dye[i, j] = bc_dye[i, j]
 
 
 def create_boundary_condition1(resolution):
@@ -124,8 +124,6 @@ def create_boundary_condition1(resolution):
     # 流入部の設定
     bc[0, :] = np.array([10.0, 0.0])
     bc_mask[0, :] = 2
-    # bc[0, resolution // 2 - 2 * size : resolution // 2 + 2 * size] = np.array([8.0, 0.0])
-    # bc_mask[0, resolution // 2 - 2 * size : resolution // 2 + 2 * size] = 2
 
     # 流出部の設定
     bc[-1, :] = np.array([10.0, 0.0])
@@ -242,18 +240,18 @@ def create_boundary_condition4(resolution):
     return BoundaryCondition(bc, bc_mask)
 
 
-def create_dyes_boundary_condition1(resolution):
+def create_dye_boundary_condition1(resolution):
     # 1: 壁, 2: 流入部, 3: 流出部
     bc = np.zeros((2 * resolution, resolution, 2))
     bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint8)
-    bc_dyes = np.zeros((2 * resolution, resolution, 3))
+    bc_dye = np.zeros((2 * resolution, resolution, 3))
 
     # 流入部の設定
     bc[:2, :] = np.array([10.0, 0.0])
-    bc_dyes[:2, :] = np.array([0.2, 0.2, 1.2])
+    bc_dye[:2, :] = np.array([0.2, 0.2, 1.2])
     width = resolution // 10
     for i in range(0, resolution, width):
-        bc_dyes[:2, i : i + width // 2] = np.array([1.2, 1.2, 0.2])
+        bc_dye[:2, i : i + width // 2] = np.array([1.2, 1.2, 0.2])
     bc_mask[:2, :] = 2
 
     # 流出部の設定
@@ -270,22 +268,22 @@ def create_dyes_boundary_condition1(resolution):
     r = resolution // 18
     BoundaryCondition._set_circle(bc, bc_mask, resolution // 2 - r, resolution // 2, r)
 
-    return DyesBoundaryCondition(bc, bc_dyes, bc_mask)
+    return DyeBoundaryCondition(bc, bc_dye, bc_mask)
 
 
-def create_dyes_boundary_condition2(resolution):
+def create_dye_boundary_condition2(resolution):
     bc = np.zeros((2 * resolution, resolution, 2))
     bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint8)
-    bc_dyes = np.zeros((2 * resolution, resolution, 3))
+    bc_dye = np.zeros((2 * resolution, resolution, 3))
 
     # 流入部の設定
     y_point = resolution // 6
     bc[:2, 2 * y_point : 4 * y_point] = np.array([6.0, 0.0])
     bc_mask[:2, 2 * y_point : 4 * y_point] = 2
-    bc_dyes[:2, 2 * y_point : 4 * y_point] = np.array([0.2, 0.2, 1.2])
+    bc_dye[:2, 2 * y_point : 4 * y_point] = np.array([0.2, 0.2, 1.2])
     width = resolution // 10
     for i in range(0, resolution, width):
-        bc_dyes[:2, i : i + width // 2] = np.array([1.2, 1.2, 0.2])
+        bc_dye[:2, i : i + width // 2] = np.array([1.2, 1.2, 0.2])
 
     # 壁の設定
     size = resolution // 32  # 壁幅
@@ -320,20 +318,20 @@ def create_dyes_boundary_condition2(resolution):
     bc[-2:, 2 * y_point : 4 * y_point] = np.array([6.0, 0.0])
     bc_mask[-2:, 2 * y_point : 4 * y_point] = 3
 
-    return DyesBoundaryCondition(bc, bc_dyes, bc_mask)
+    return DyeBoundaryCondition(bc, bc_dye, bc_mask)
 
 
-def create_dyes_boundary_condition3(resolution):
+def create_dye_boundary_condition3(resolution):
     bc = np.zeros((2 * resolution, resolution, 2))
     bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint8)
-    bc_dyes = np.zeros((2 * resolution, resolution, 3))
+    bc_dye = np.zeros((2 * resolution, resolution, 3))
 
     # 流入部の設定
     bc[:2, :] = np.array([4.0, 0.0])
-    bc_dyes[:2, :] = np.array([0.2, 0.2, 1.2])
+    bc_dye[:2, :] = np.array([0.2, 0.2, 1.2])
     width = resolution // 10
     for i in range(0, resolution, width):
-        bc_dyes[:2, i : i + width // 2] = np.array([1.2, 1.2, 0.2])
+        bc_dye[:2, i : i + width // 2] = np.array([1.2, 1.2, 0.2])
     bc_mask[:2, :] = 2
 
     # 流出部の設定
@@ -355,13 +353,13 @@ def create_dyes_boundary_condition3(resolution):
     for p in points:
         BoundaryCondition._set_circle(bc, bc_mask, p[0], p[1], r)
 
-    return DyesBoundaryCondition(bc, bc_dyes, bc_mask)
+    return DyeBoundaryCondition(bc, bc_dye, bc_mask)
 
 
-def create_dyes_boundary_condition4(resolution):
+def create_dye_boundary_condition4(resolution):
     bc = np.zeros((2 * resolution, resolution, 2))
     bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint8)
-    bc_dyes = np.zeros((2 * resolution, resolution, 3))
+    bc_dye = np.zeros((2 * resolution, resolution, 3))
 
     # 壁の設定
     bc[:2, :] = np.array([0.0, 0.0])
@@ -376,12 +374,12 @@ def create_dyes_boundary_condition4(resolution):
     # 流入部（下）の設定
     size = resolution // 5
     bc[size : 2 * size, :2] = np.array([6.0, 12.0])
-    bc_dyes[size : 2 * size, :2] = np.array([1.2, 1.2, 0.2])
+    bc_dye[size : 2 * size, :2] = np.array([1.2, 1.2, 0.2])
     bc_mask[size : 2 * size, :2] = 2
 
     # 流入部（上）の設定
     bc[-2 * size : -size, -2:] = np.array([-6.0, -12.0])
-    bc_dyes[-2 * size : -size, -2:] = np.array([0.2, 0.2, 1.2])
+    bc_dye[-2 * size : -size, -2:] = np.array([0.2, 0.2, 1.2])
     bc_mask[-2 * size : -size, -2:] = 2
 
-    return DyesBoundaryCondition(bc, bc_dyes, bc_mask)
+    return DyeBoundaryCondition(bc, bc_dye, bc_mask)

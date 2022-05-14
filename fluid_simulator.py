@@ -8,13 +8,13 @@ from boundary_condition import (
     create_boundary_condition2,
     create_boundary_condition3,
     create_boundary_condition4,
-    create_dyes_boundary_condition1,
-    create_dyes_boundary_condition2,
-    create_dyes_boundary_condition3,
-    create_dyes_boundary_condition4,
+    create_dye_boundary_condition1,
+    create_dye_boundary_condition2,
+    create_dye_boundary_condition3,
+    create_dye_boundary_condition4,
 )
 from advection import advect, advect_upwind, advect_kk_scheme
-from solver import MacSolver, DyesMacSolver, CipMacSolver, DyesCipMacSolver
+from solver import MacSolver, DyeMacSolver, CipMacSolver, DyeCipMacSolver
 from visualization import visualize_norm, visualize_pressure, visualize_vorticity
 
 
@@ -75,37 +75,37 @@ class FluidSimulator:
         else:
             raise NotImplementedError
 
-        solver = CipMacSolver(boundary_condition, dt, re, 2)
+        solver = CipMacSolver(boundary_condition, dt, re, 2, vor_epsilon=2.0)
         return FluidSimulator(solver)
 
 
 @ti.data_oriented
-class DyesFluidSimulator(FluidSimulator):
+class DyeFluidSimulator(FluidSimulator):
     def get_dye_field(self):
         self._to_dye(self.rgb_buf, *self._solver.get_fields())
         return self.rgb_buf
 
     @ti.kernel
     def _to_dye(
-        self, rgb_buf: ti.template(), v: ti.template(), p: ti.template(), dyes: ti.template()
+        self, rgb_buf: ti.template(), v: ti.template(), p: ti.template(), dye: ti.template()
     ):
         for i, j in rgb_buf:
-            rgb_buf[i, j] = dyes[i, j]
+            rgb_buf[i, j] = dye[i, j]
             if self._solver.is_wall(i, j):
                 rgb_buf[i, j] = self._wall_color
 
     @staticmethod
     def create(num, resolution, dt, re):
         if num == 1:
-            boundary_condition = create_dyes_boundary_condition1(resolution)
+            boundary_condition = create_dye_boundary_condition1(resolution)
         elif num == 2:
-            boundary_condition = create_dyes_boundary_condition2(resolution)
+            boundary_condition = create_dye_boundary_condition2(resolution)
         elif num == 3:
-            boundary_condition = create_dyes_boundary_condition3(resolution)
+            boundary_condition = create_dye_boundary_condition3(resolution)
         elif num == 4:
-            boundary_condition = create_dyes_boundary_condition4(resolution)
+            boundary_condition = create_dye_boundary_condition4(resolution)
         else:
             raise NotImplementedError
 
-        solver = DyesCipMacSolver(boundary_condition, dt, re, 2)
-        return DyesFluidSimulator(solver)
+        solver = DyeCipMacSolver(boundary_condition, dt, re, 2, vor_epsilon=2.0)
+        return DyeFluidSimulator(solver)

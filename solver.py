@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 
 import taichi as ti
+from advection import vorticity_vec
 
 from differentiation import (
     sample,
@@ -64,7 +65,7 @@ class MacSolver(Solver):
         self.dt = dt
         self.Re = Re
 
-        self.v = DoubleBuffers(self._resolution, 2)  # velocities
+        self.v = DoubleBuffers(self._resolution, 2)  # velocity
         self.p = DoubleBuffers(self._resolution, 1)  # pressure
 
         self.p_iter = p_iter
@@ -130,7 +131,7 @@ class FsSolver(Solver):
         self.dt = dt
         self.Re = Re
 
-        self.v = ti.Vector.field(2, float, shape=self._resolution)  # velocities
+        self.v = ti.Vector.field(2, float, shape=self._resolution)  # velocity
         self.p = DoubleBuffers(self._resolution, 1)  # pressure
         self.tv = ti.Vector.field(2, float, shape=self._resolution)  # temp velocities
 
@@ -182,32 +183,32 @@ class FsSolver(Solver):
 
 
 @ti.data_oriented
-class DyesMacSolver(MacSolver):
+class DyeMacSolver(MacSolver):
     """Maker And Cell method"""
 
     def __init__(self, boundary_condition, advect_function, dt, Re, p_iter):
         super().__init__(boundary_condition, advect_function, dt, Re, p_iter)
-        self.dyes = DoubleBuffers(self._resolution, 3)  # dyes
+        self.dye = DoubleBuffers(self._resolution, 3)  # dye
 
     def update(self):
-        self._bc.calc(self.v.current, self.p.current, self.dyes.current)
+        self._bc.calc(self.v.current, self.p.current, self.dye.current)
         self._update_velocities(self.v.next, self.v.current, self.p.current)
         self.v.swap()
 
-        self._bc.calc(self.v.current, self.p.current, self.dyes.current)
+        self._bc.calc(self.v.current, self.p.current, self.dye.current)
         for _ in range(self.p_iter):
             self._update_pressures(self.p.next, self.p.current, self.v.current)
             self.p.swap()
 
-        self._bc.calc(self.v.current, self.p.current, self.dyes.current)
-        self._update_dyes(self.dyes.next, self.dyes.current, self.v.current)
-        self.dyes.swap()
+        self._bc.calc(self.v.current, self.p.current, self.dye.current)
+        self._update_dye(self.dye.next, self.dye.current, self.v.current)
+        self.dye.swap()
 
     def get_fields(self):
-        return self.v.current, self.p.current, self.dyes.current
+        return self.v.current, self.p.current, self.dye.current
 
     @ti.kernel
-    def _update_dyes(self, dn: ti.template(), dc: ti.template(), vc: ti.template()):
+    def _update_dye(self, dn: ti.template(), dc: ti.template(), vc: ti.template()):
         for i, j in dn:
             if not self._bc.is_wall(i, j):
                 dn[i, j] = ti.max(ti.min(dc[i, j] - self.dt * self._advect(vc, dc, i, j), 1.0), 0.0)
@@ -217,17 +218,21 @@ class DyesMacSolver(MacSolver):
 class CipMacSolver(Solver):
     """Maker And Cell method"""
 
-    def __init__(self, boundary_condition, dt, Re, p_iter):
+    def __init__(self, boundary_condition, dt, Re, p_iter, vor_epsilon=None):
         super().__init__(boundary_condition)
         self.dt = dt
         self.Re = Re
 
+        self.v = DoubleBuffers(self._resolution, 2)  # velocity
+        self.vx = DoubleBuffers(self._resolution, 2)  # velocity gradient x
+        self.vy = DoubleBuffers(self._resolution, 2)  # velocity gradient y
         self.p = DoubleBuffers(self._resolution, 1)  # pressure
-        self.v = DoubleBuffers(self._resolution, 2)
-        self.vx = DoubleBuffers(self._resolution, 2)
-        self.vy = DoubleBuffers(self._resolution, 2)
 
         self.p_iter = p_iter
+
+        self.vor = ti.field(float, shape=self._resolution)  # vorticity
+        self.vor_abs = ti.field(float, shape=self._resolution)
+        self.vor_epsilon = vor_epsilon
 
         # initial condition
         self._initialize()
@@ -245,13 +250,18 @@ class CipMacSolver(Solver):
         self._bc.calc(self.v.current, self.p.current)
         self._update_velocities(self.v, self.vx, self.vy, self.p)
 
+        if self.vor_epsilon is not None:
+            self._calc_vorticity(self.vor, self.vor_abs, self.v.current)
+            self._add_vorticity(self.v.next, self.v.current, self.vor, self.vor_abs)
+            self.v.swap()
+
         self._bc.calc(self.v.current, self.p.current)
         for _ in range(self.p_iter):
             self._update_pressures(self.p.next, self.p.current, self.v.current)
             self.p.swap()
 
     def get_fields(self):
-        return self.v.current, self.p.current
+        return self.v.current, self.p.current, self.vor_abs
 
     @ti.kernel
     def _calc_grad_x(self, fx: ti.template(), f: ti.template()):
@@ -264,6 +274,25 @@ class CipMacSolver(Solver):
         for i, j in fy:
             if not self._bc.is_wall(i, j):
                 fy[i, j] = diff_y(f, i, j)
+
+    @ti.kernel
+    def _calc_vorticity(self, vor: ti.template(), vor_abs: ti.template(), vc: ti.template()):
+        for i, j in vor:
+            if not self._bc.is_wall(i, j):
+                vor[i, j] = diff_x(vc, i, j).y - diff_y(vc, i, j).x
+                vor_abs[i, j] = ti.abs(vor[i, j])
+
+    @ti.kernel
+    def _add_vorticity(
+        self,
+        vn: ti.template(),
+        vc: ti.template(),
+        vor: ti.template(),
+        vor_abs: ti.template(),
+    ):
+        for i, j in vn:
+            if not self._bc.is_wall(i, j):
+                vn[i, j] = vc[i, j] + self.dt * vorticity_vec(vor, vor_abs, i, j) * self.vor_epsilon
 
     def _update_velocities(self, v, vx, vy, p):
         self._non_advection_phase(v.next, v.current, p.current)
@@ -348,10 +377,6 @@ class CipMacSolver(Solver):
             if not self._bc.is_wall(i, j):
                 self._cip_advect(fn, fxn, fyn, fc, fxc, fyc, v, i, j)
 
-    # @ti.kernel
-    # def _vorticity_confinement(self, vn:ti.template(), vc:ti.template()):
-    #     for
-
     @ti.func
     def _cip_advect(self, fn, fxn, fyn, fc, fxc, fyc, v, i, j):
         i_s = int(sign(v[i, j].x))
@@ -406,53 +431,58 @@ class CipMacSolver(Solver):
 
 
 @ti.data_oriented
-class DyesCipMacSolver(CipMacSolver):
+class DyeCipMacSolver(CipMacSolver):
     """Maker And Cell method"""
 
-    def __init__(self, boundary_condition, dt, Re, p_iter):
-        self.dyes = DoubleBuffers(boundary_condition.get_resolution(), 3)  # dyes
-        self.dyesx = DoubleBuffers(boundary_condition.get_resolution(), 3)  # dyes
-        self.dyesy = DoubleBuffers(boundary_condition.get_resolution(), 3)  # dyes
+    def __init__(self, boundary_condition, dt, Re, p_iter, vor_epsilon=None):
+        self.dye = DoubleBuffers(boundary_condition.get_resolution(), 3)  # dye
+        self.dyex = DoubleBuffers(boundary_condition.get_resolution(), 3)  # dye gradient x
+        self.dyey = DoubleBuffers(boundary_condition.get_resolution(), 3)  # dye gradient y
 
-        super().__init__(boundary_condition, dt, Re, p_iter)
+        super().__init__(boundary_condition, dt, Re, p_iter, vor_epsilon)
 
     def _initialize(self):
         self.v.current.fill(ti.Vector([0.4, 0.0]))
         self.vx.reset()
         self.vy.reset()
-        self.dyes.reset()
-        self.dyesx.reset()
-        self.dyesy.reset()
+        self.dye.reset()
+        self.dyex.reset()
+        self.dyey.reset()
 
-        self._bc.calc(self.v.current, self.p.current, self.dyes.current)
+        self._bc.calc(self.v.current, self.p.current, self.dye.current)
         self._calc_grad_x(self.vx.current, self.v.current)
         self._calc_grad_y(self.vy.current, self.v.current)
 
-        self._calc_grad_x(self.dyesx.current, self.dyes.current)
-        self._calc_grad_y(self.dyesy.current, self.dyes.current)
+        self._calc_grad_x(self.dyex.current, self.dye.current)
+        self._calc_grad_y(self.dyey.current, self.dye.current)
 
     def update(self):
-        self._bc.calc(self.v.current, self.p.current, self.dyes.current)
+        self._bc.calc(self.v.current, self.p.current, self.dye.current)
         self._update_velocities(self.v, self.vx, self.vy, self.p)
 
-        self._bc.calc(self.v.current, self.p.current, self.dyes.current)
+        if self.vor_epsilon is not None:
+            self._calc_vorticity(self.vor, self.vor_abs, self.v.current)
+            self._add_vorticity(self.v.next, self.v.current, self.vor, self.vor_abs)
+            self.v.swap()
+
+        self._bc.calc(self.v.current, self.p.current, self.dye.current)
         for _ in range(self.p_iter):
             self._update_pressures(self.p.next, self.p.current, self.v.current)
             self.p.swap()
 
-        self._bc.calc(self.v.current, self.p.current, self.dyes.current)
-        self._update_dyes(
-            self.dyes,
-            self.dyesx,
-            self.dyesy,
+        self._bc.calc(self.v.current, self.p.current, self.dye.current)
+        self._update_dye(
+            self.dye,
+            self.dyex,
+            self.dyey,
             self.v,
         )
 
     def get_fields(self):
-        return self.v.current, self.p.current, self.dyes.current
+        return self.v.current, self.p.current, self.dye.current
 
     @ti.kernel
-    def _non_advection_phase_dyes(
+    def _non_advection_phase_dye(
         self,
         dn: ti.template(),
         dc: ti.template(),
@@ -470,19 +500,19 @@ class DyesCipMacSolver(CipMacSolver):
             dx[i, j] = ti.max(ti.min(dx[i, j], 1.0), -1.0)
             dy[i, j] = ti.max(ti.min(dy[i, j], 1.0), -1.0)
 
-    def _update_dyes(self, dyes, dyesx, dyesy, v):
-        self._non_advection_phase_dyes(dyes.next, dyes.current)
+    def _update_dye(self, dye, dyex, dyey, v):
+        self._non_advection_phase_dye(dye.next, dye.current)
         self._non_advection_phase_grad(
-            dyesx.next, dyesy.next, dyesx.current, dyesy.current, dyes.current, dyes.next
+            dyex.next, dyey.next, dyex.current, dyey.current, dye.current, dye.next
         )
-        dyes.swap()
-        dyesx.swap()
-        dyesy.swap()
+        dye.swap()
+        dyex.swap()
+        dyey.swap()
 
         self._advection_phase(
-            dyes.next, dyesx.next, dyesy.next, dyes.current, dyesx.current, dyesy.current, v.current
+            dye.next, dyex.next, dyey.next, dye.current, dyex.current, dyey.current, v.current
         )
-        dyes.swap()
-        dyesx.swap()
-        dyesy.swap()
-        self._clamp(dyes.current, dyesx.current, dyesy.current)
+        dye.swap()
+        dyex.swap()
+        dyey.swap()
+        self._clamp(dye.current, dyex.current, dyey.current)
