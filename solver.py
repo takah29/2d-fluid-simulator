@@ -256,21 +256,6 @@ class CipMacSolver(Solver):
     def get_fields(self):
         return self.v.current, self.p.current
 
-    def _update_velocities(self, f, fx, fy, v, p):
-        self._non_advection_phase(
-            f.next, fx.next, fy.next, f.current, fx.current, fy.current, p.current
-        )
-        f.swap()
-        fx.swap()
-        fy.swap()
-        self._advection_phase(
-            f.next, fx.next, fy.next, f.current, fx.current, fy.current, v.current
-        )
-        f.swap()
-        fx.swap()
-        fy.swap()
-        self.v.current.copy_from(self.f.current)
-
     @ti.kernel
     def _calc_grad_x(self, fx: ti.template(), f: ti.template()):
         for i, j in fx:
@@ -283,32 +268,53 @@ class CipMacSolver(Solver):
             if not self._bc.is_wall(i, j):
                 fy[i, j] = diff_y(f, i, j)
 
+    def _update_velocities(self, f, fx, fy, v, p):
+        self._non_advection_phase(f.next, f.current, p.current)
+        self._non_advection_phase_grad(fx.next, fy.next, fx.current, fy.current, f.current, f.next)
+        f.swap()
+        fx.swap()
+        fy.swap()
+        self._advection_phase(
+            f.next, fx.next, fy.next, f.current, fx.current, fy.current, v.current
+        )
+        f.swap()
+        fx.swap()
+        fy.swap()
+        self.v.current.copy_from(self.f.current)
+
     @ti.kernel
     def _non_advection_phase(
         self,
         fn: ti.template(),
-        fxn: ti.template(),
-        fyn: ti.template(),
         fc: ti.template(),
-        fxc: ti.template(),
-        fyc: ti.template(),
         pc: ti.template(),
     ):
-        """移流項の中間量の計算"""
+        """中間量の計算"""
         for i, j in fn:
             # 移流量の更新
             if not self._bc.is_wall(i, j):
-                G = (
-                    -ti.Vector(
-                        [
-                            diff_x(pc, i, j),
-                            diff_y(pc, i, j),
-                        ]
-                    )
-                    + (diff2_x(fc, i, j) + diff2_y(fc, i, j)) / self.Re
-                )
+                G = -ti.Vector(
+                    [
+                        diff_x(pc, i, j),
+                        diff_y(pc, i, j),
+                    ]
+                ) + self._calc_diffusion(fc, i, j)
                 fn[i, j] = fc[i, j] + G * self.dt
 
+    @ti.kernel
+    def _non_advection_phase_grad(
+        self,
+        fxn: ti.template(),
+        fyn: ti.template(),
+        fxc: ti.template(),
+        fyc: ti.template(),
+        fc: ti.template(),
+        fn: ti.template(),
+    ):
+        """中間量の計算"""
+        for i, j in fn:
+            # 移流量の更新
+            if not self._bc.is_wall(i, j):
                 # 勾配の更新
                 fxn[i, j] = (
                     fxc[i, j] + (fn[i + 1, j] - fc[i + 1, j] - fn[i - 1, j] + fc[i - 1, j]) / 2.0
@@ -316,6 +322,20 @@ class CipMacSolver(Solver):
                 fyn[i, j] = (
                     fyc[i, j] + (fn[i, j + 1] - fc[i, j + 1] - fn[i, j - 1] + fc[i, j - 1]) / 2.0
                 )
+
+    @ti.func
+    def _cip_non_advect(self, fn, fxn, fyn, fc, fxc, fyc, pc, i, j):
+        G = -ti.Vector(
+            [
+                diff_x(pc, i, j),
+                diff_y(pc, i, j),
+            ]
+        ) + self._calc_diffusion(fc, i, j)
+        fn[i, j] = fc[i, j] + G * self.dt
+
+    @ti.func
+    def _calc_diffusion(self, fc, i, j):
+        return (diff2_x(fc, i, j) + diff2_y(fc, i, j)) / self.Re
 
     @ti.kernel
     def _advection_phase(
@@ -330,38 +350,42 @@ class CipMacSolver(Solver):
     ):
         for i, j in fn:
             if not self._bc.is_wall(i, j):
-                i_s = int(sign(vc[i, j].x))
-                j_s = int(sign(vc[i, j].y))
-                i_m = i - i_s
-                j_m = j - j_s
+                self._cip_advect(fn, fxn, fyn, fc, fxc, fyc, vc, i, j)
 
-                tmp1 = fc[i, j] - fc[i, j_m] - fc[i_m, j] + fc[i_m, j_m]
-                tmp2 = fc[i_m, j] - fc[i, j]
-                tmp3 = fc[i, j_m] - fc[i, j]
+    @ti.func
+    def _cip_advect(self, fn, fxn, fyn, fc, fxc, fyc, vc, i, j):
+        i_s = int(sign(vc[i, j].x))
+        j_s = int(sign(vc[i, j].y))
+        i_m = i - i_s
+        j_m = j - j_s
 
-                a = (i_s * (fxc[i_m, j] + fxc[i, j]) - 2.0 * (-tmp2)) / i_s
-                b = (j_s * (fyc[i, j_m] + fyc[i, j]) - 2.0 * (-tmp3)) / j_s
-                c = (-tmp1 - i_s * (fxc[i, j_m] - fxc[i, j])) / j_s
-                d = (-tmp1 - j_s * (fyc[i_m, j] - fyc[i, j])) / i_s
-                e = 3.0 * tmp2 + i_s * (fxc[i_m, j] + 2.0 * fxc[i, j])
-                f = 3.0 * tmp3 + j_s * (fyc[i, j_m] + 2.0 * fyc[i, j])
-                g = (-(fyc[i_m, j] - fyc[i, j]) + c) / i_s
+        tmp1 = fc[i, j] - fc[i, j_m] - fc[i_m, j] + fc[i_m, j_m]
+        tmp2 = fc[i_m, j] - fc[i, j]
+        tmp3 = fc[i, j_m] - fc[i, j]
 
-                X = -vc[i, j].x * self.dt
-                Y = -vc[i, j].y * self.dt
+        a = (i_s * (fxc[i_m, j] + fxc[i, j]) - 2.0 * (-tmp2)) / i_s
+        b = (j_s * (fyc[i, j_m] + fyc[i, j]) - 2.0 * (-tmp3)) / j_s
+        c = (-tmp1 - i_s * (fxc[i, j_m] - fxc[i, j])) / j_s
+        d = (-tmp1 - j_s * (fyc[i_m, j] - fyc[i, j])) / i_s
+        e = 3.0 * tmp2 + i_s * (fxc[i_m, j] + 2.0 * fxc[i, j])
+        f = 3.0 * tmp3 + j_s * (fyc[i, j_m] + 2.0 * fyc[i, j])
+        g = (-(fyc[i_m, j] - fyc[i, j]) + c) / i_s
 
-                fn[i, j] = (
-                    ((a * X + c * Y + e) * X + g * Y + fxc[i, j]) * X
-                    + ((b * Y + d * X + f) * Y + fyc[i, j]) * Y
-                    + fc[i, j]
-                )
+        X = -vc[i, j].x * self.dt
+        Y = -vc[i, j].y * self.dt
 
-                # 勾配の更新
-                Fx = (3.0 * a * X + 2.0 * c * Y + 2.0 * e) * X + (d * Y + g) * Y + fxc[i, j]
-                Fy = (3.0 * b * Y + 2.0 * d * X + 2.0 * f) * Y + (c * X + g) * X + fyc[i, j]
+        fn[i, j] = (
+            ((a * X + c * Y + e) * X + g * Y + fxc[i, j]) * X
+            + ((b * Y + d * X + f) * Y + fyc[i, j]) * Y
+            + fc[i, j]
+        )
 
-                fxn[i, j] = Fx - self.dt * (Fx * diff_x(vc, i, j).x + Fy * diff_x(vc, i, j).y) / 2.0
-                fyn[i, j] = Fy - self.dt * (Fx * diff_y(vc, i, j).x + Fy * diff_y(vc, i, j).y) / 2.0
+        # 勾配の更新
+        Fx = (3.0 * a * X + 2.0 * c * Y + 2.0 * e) * X + (d * Y + g) * Y + fxc[i, j]
+        Fy = (3.0 * b * Y + 2.0 * d * X + 2.0 * f) * Y + (c * X + g) * X + fyc[i, j]
+
+        fxn[i, j] = Fx - self.dt * (Fx * diff_x(vc, i, j).x + Fy * diff_x(vc, i, j).y) / 2.0
+        fyn[i, j] = Fy - self.dt * (Fx * diff_y(vc, i, j).x + Fy * diff_y(vc, i, j).y) / 2.0
 
     @ti.kernel
     def _update_pressures(self, pn: ti.template(), pc: ti.template(), vc: ti.template()):
@@ -385,9 +409,11 @@ class CipMacSolver(Solver):
 class DyesCipMacSolver(CipMacSolver):
     """Maker And Cell method"""
 
-    def __init__(self, boundary_condition, advect_function, dt, Re, p_iter):
+    def __init__(self, boundary_condition, dt, Re, p_iter):
         self.dyes = DoubleBuffers(boundary_condition.get_resolution(), 3)  # dyes
-        self._advect = advect_function
+        self.dyesx = DoubleBuffers(boundary_condition.get_resolution(), 3)  # dyes
+        self.dyesy = DoubleBuffers(boundary_condition.get_resolution(), 3)  # dyes
+
         super().__init__(boundary_condition, dt, Re, p_iter)
 
     def _initialize(self):
@@ -395,11 +421,17 @@ class DyesCipMacSolver(CipMacSolver):
         self.f.reset()
         self.fx.reset()
         self.fy.reset()
+        self.dyes.reset()
+        self.dyesx.reset()
+        self.dyesy.reset()
 
         self._bc.calc(self.v.current, self.p.current, self.dyes.current)
         self.f.current.copy_from(self.v.current)
         self._calc_grad_x(self.fx.current, self.f.current)
         self._calc_grad_y(self.fy.current, self.f.current)
+
+        self._calc_grad_x(self.dyesx.current, self.dyes.current)
+        self._calc_grad_y(self.dyesy.current, self.dyes.current)
 
     def update(self):
         self._bc.calc(self.f.current, self.p.current, self.dyes.current)
@@ -411,14 +443,48 @@ class DyesCipMacSolver(CipMacSolver):
             self.p.swap()
 
         self._bc.calc(self.v.current, self.p.current, self.dyes.current)
-        self._update_dyes(self.dyes.next, self.dyes.current, self.v.current)
-        self.dyes.swap()
+        self._update_dyes(
+            self.dyes,
+            self.dyesx,
+            self.dyesy,
+            self.v,
+        )
 
     def get_fields(self):
         return self.v.current, self.p.current, self.dyes.current
 
     @ti.kernel
-    def _update_dyes(self, dn: ti.template(), dc: ti.template(), vc: ti.template()):
+    def _non_advection_phase_dyes(
+        self,
+        dn: ti.template(),
+        dc: ti.template(),
+    ):
+        """中間量の計算"""
         for i, j in dn:
+            # 移流量の更新
             if not self._bc.is_wall(i, j):
-                dn[i, j] = ti.max(ti.min(dc[i, j] - self.dt * self._advect(vc, dc, i, j), 1.0), 0.0)
+                dn[i, j] = dc[i, j] + self._calc_diffusion(dc, i, j) * self.dt
+
+    @ti.kernel
+    def _clamp(self, d: ti.template(), dx: ti.template(), dy: ti.template()):
+        for i, j in d:
+            d[i, j] = ti.max(ti.min(d[i, j], 1.0), 0.0)
+            dx[i, j] = ti.max(ti.min(dx[i, j], 1.0), -1.0)
+            dy[i, j] = ti.max(ti.min(dy[i, j], 1.0), -1.0)
+
+    def _update_dyes(self, dyes, dyesx, dyesy, v):
+        self._non_advection_phase_dyes(dyes.next, dyes.current)
+        self._non_advection_phase_grad(
+            dyesx.next, dyesy.next, dyesx.current, dyesy.current, dyes.current, dyes.next
+        )
+        dyes.swap()
+        dyesx.swap()
+        dyesy.swap()
+
+        self._advection_phase(
+            dyes.next, dyesx.next, dyesy.next, dyes.current, dyesx.current, dyesy.current, v.current
+        )
+        dyes.swap()
+        dyesx.swap()
+        dyesy.swap()
+        self._clamp(dyes.current, dyesx.current, dyesy.current)
