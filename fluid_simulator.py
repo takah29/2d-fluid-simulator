@@ -63,7 +63,7 @@ class FluidSimulator:
                 rgb_buf[i, j] = self._wall_color
 
     @staticmethod
-    def create(num, resolution, dt, re):
+    def create(num, resolution, dt, re, vor_eps, scheme):
         if num == 1:
             boundary_condition = create_boundary_condition1(resolution)
         elif num == 2:
@@ -75,7 +75,13 @@ class FluidSimulator:
         else:
             raise NotImplementedError
 
-        solver = CipMacSolver(boundary_condition, dt, re, 2, vor_epsilon=1.0)
+        if scheme == "cip":
+            solver = CipMacSolver(boundary_condition, dt, re, 2, vor_eps)
+        elif scheme == "upwind":
+            solver = MacSolver(boundary_condition, advect_upwind, dt, re, 2, vor_eps)
+        elif scheme == "kk":
+            solver = MacSolver(boundary_condition, advect_kk_scheme, dt, re, 2, vor_eps)
+
         return FluidSimulator(solver)
 
 
@@ -95,7 +101,7 @@ class DyeFluidSimulator(FluidSimulator):
                 rgb_buf[i, j] = self._wall_color
 
     @staticmethod
-    def create(num, resolution, dt, re):
+    def create(num, resolution, dt, re, vor_eps, scheme):
         if num == 1:
             boundary_condition = create_dye_boundary_condition1(resolution)
         elif num == 2:
@@ -107,5 +113,11 @@ class DyeFluidSimulator(FluidSimulator):
         else:
             raise NotImplementedError
 
-        solver = DyeCipMacSolver(boundary_condition, dt, re, 2, vor_epsilon=1.0)
+        if scheme == "cip":
+            solver = DyeCipMacSolver(boundary_condition, dt, re, 2, vor_eps)
+        elif scheme == "upwind":
+            solver = DyeMacSolver(boundary_condition, advect_upwind, dt, re, 2, vor_eps)
+        elif scheme == "kk":
+            solver = DyeMacSolver(boundary_condition, advect_kk_scheme, dt, re, 2, vor_eps)
+
         return DyeFluidSimulator(solver)

@@ -1,26 +1,75 @@
+import argparse
+
 import taichi as ti
-from fluid_simulator import FluidSimulator, DyeFluidSimulator
+
+from fluid_simulator import DyeFluidSimulator, FluidSimulator
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Fluid Simulator")
+    parser.add_argument(
+        "-bc",
+        "--boundary_condition",
+        help="Boundary condition number",
+        type=int,
+        choices=[1, 2, 3, 4],
+        default=1,
+    )
+    parser.add_argument("-re", "--reynolds_num", help="Reynolds number", type=float, default=10.0)
+    parser.add_argument("-res", "--resolution", help="Resolution of y-axis", type=int, default=400)
+    parser.add_argument("-dt", "--time_step", help="Time step", type=float, default=0.01)
+    parser.add_argument(
+        "-vis",
+        "--visualization",
+        help="Visualization type",
+        type=int,
+        choices=[0, 1, 2, 3],
+        default=0,
+    )
+    parser.add_argument(
+        "-vor_eps",
+        "--vorticity_confinement_eps",
+        help="Vorticity Confinement eps. 0.0 is disable.",
+        type=float,
+        default=1.0,
+    )
+    parser.add_argument(
+        "-scheme",
+        "--advection_scheme",
+        help="Advection Scheme",
+        type=str,
+        choices=["upwind", "kk", "cip"],
+        default="cip",
+    )
+    parser.add_argument("-no_dye", "--no_dye", help="No calculate dye", action="store_true")
+
+    args = parser.parse_args()
+
     arch = ti.vulkan if ti._lib.core.with_vulkan() else ti.cuda
     ti.init(arch=arch)
 
-    resolution = 800
-    paused = False
+    n_bc = args.boundary_condition
+    dt = args.time_step
+    re = args.reynolds_num
+    resolution = args.resolution
+    vis_num = args.visualization
+    no_dye = args.no_dye
+    scheme = args.advection_scheme
+    vor_eps = args.vorticity_confinement_eps if args.vorticity_confinement_eps != 0.0 else None
 
     window = ti.ui.Window("Fluid Simulation", (2 * resolution, resolution), vsync=False)
     canvas = window.get_canvas()
 
-    dt = 0.02
-    re = 1e8
-    fluid_sim = DyeFluidSimulator.create(2, resolution, dt, re)
-    n_vis = 4
+    if no_dye:
+        fluid_sim = FluidSimulator.create(n_bc, resolution, dt, re, vor_eps, scheme)
+    else:
+        fluid_sim = DyeFluidSimulator.create(n_bc, resolution, dt, re, vor_eps, scheme)
 
     video_manager = ti.tools.VideoManager(output_dir="result", framerate=30, automatic_build=False)
 
+    n_vis = 3 if no_dye else 4
     count = 0
-    vis_num = 0
+    paused = False
     img = None
     while window.running:
         if window.get_event(ti.ui.PRESS):
