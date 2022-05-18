@@ -330,7 +330,7 @@ def create_dye_boundary_condition3(resolution):
     bc_dye = np.zeros((2 * resolution, resolution, 3))
 
     # 流入部の設定
-    bc[:2, :] = np.array([4.0, 0.0])
+    bc[:2, :] = np.array([8.0, 0.0])
     bc_dye[:2, :] = np.array([0.2, 0.2, 1.2])
     width = resolution // 10
     for i in range(0, resolution, width):
