@@ -33,8 +33,8 @@ python main.py -re 0.5  # Boundary Condition 1, Reynolds Number = 0.5, dt = 0.01
 Press the v key switches the flow visualization method.
 
 ```bash
-python main.py -bc 2 -re 100 -res 800  # Boundary Condition 2, Reynolds Number = 100.0, dt = 0.01
-python main.py -bc 3 -re 100 -res 800 -vor_eps 0.0 -scheme kk  # Boundary Condition 3, Reynolds Number = 100.0, dt = 0.01, Kawamura-Kuwahara Scheme, no vorticity confinement
+python main.py -bc 2 -re 100 -res 800 -dt 0.03 # Boundary Condition 2, Reynolds Number = 100.0, dt = 0.03
+python main.py -bc 3 -re 100 -res 800 -vor_eps 0.0 -dt 0.03  # Boundary Condition 3, Reynolds Number = 100.0, dt = 0.03, no vorticity confinement
 python main.py -bc 4 -re 100  # Boundary Condition 4, Reynolds Number = 100.0, dt = 0.01
 python main.py -h  # help
 ```
