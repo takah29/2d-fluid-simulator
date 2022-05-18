@@ -314,6 +314,14 @@ class CipMacSolver(Solver):
         v.swap()
         vx.swap()
         vy.swap()
+        self._clamp_velocity(v.current, vx.current, vy.current)
+
+    @ti.kernel
+    def _clamp_velocity(self, v: ti.template(), vx: ti.template(), vy: ti.template()):
+        for i, j in v:
+            v[i, j] = ti.max(ti.min(v[i, j], 40.0), -40.0)
+            vx[i, j] = ti.max(ti.min(vx[i, j], 20.0), -20.0)
+            vy[i, j] = ti.max(ti.min(vy[i, j], 20.0), -20.0)
 
     @ti.kernel
     def _non_advection_phase(
@@ -503,7 +511,7 @@ class DyeCipMacSolver(CipMacSolver):
                 dn[i, j] = dc[i, j] + self._calc_diffusion(dc, i, j) * self.dt
 
     @ti.kernel
-    def _clamp(self, d: ti.template(), dx: ti.template(), dy: ti.template()):
+    def _clamp_dye(self, d: ti.template(), dx: ti.template(), dy: ti.template()):
         for i, j in d:
             d[i, j] = ti.max(ti.min(d[i, j], 1.0), 0.0)
             dx[i, j] = ti.max(ti.min(dx[i, j], 1.0), -1.0)
@@ -524,4 +532,4 @@ class DyeCipMacSolver(CipMacSolver):
         dye.swap()
         dyex.swap()
         dyey.swap()
-        self._clamp(dye.current, dyex.current, dyey.current)
+        self._clamp_dye(dye.current, dyex.current, dyey.current)
