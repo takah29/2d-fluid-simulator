@@ -26,38 +26,51 @@ GeForce GTX 1080 or higher recommended.
 
 ## Usage
 
-```bash
-python main.py -re 0.5  # Boundary Condition 1, Reynolds Number = 0.5, dt = 0.01
-```
-
-Press the v key switches the flow visualization method.
-
-```bash
-python main.py -bc 2 -re 100 -res 800 -dt 0.03 # Boundary Condition 2, Reynolds Number = 100.0, dt = 0.03
-python main.py -bc 3 -re 100 -res 800 -vor_eps 0.0 -dt 0.03  # Boundary Condition 3, Reynolds Number = 100.0, dt = 0.03, no vorticity confinement
-python main.py -bc 4 -re 100  # Boundary Condition 4, Reynolds Number = 100.0, dt = 0.01
-python main.py -h  # help
-```
+- Boundary Condition 1, Reynolds Number = 0.5, dt = 0.01
+  ```bash
+  python main.py -re 0.5
+  ```
+  Press the `v` key switches the flow visualization method.
+- Boundary Condition 2, Reynolds Number = 100.0, resolution = 800, dt = 0.01
+  ```bash
+  python main.py -bc 2 -re 100 -res 800
+  ```
+- Boundary Condition 3, Reynolds Number = 100.0, resolution = 800, dt = 0.01, no vorticity confinement, upwind scheme
+  ```bash
+  python main.py -bc 3 -re 100 -res 800 -vor_eps 0.0 -scheme upwind
+  ```
+- Boundary Condition 3, Reynolds Number = 100.0, resolution = 800, dt = 0.01, no vorticity confinement, cip scheme
+  ```bash
+  python main.py -bc 3 -re 100 -res 800 -vor_eps 0.0
+  ```
+- Boundary Condition 4, Reynolds Number = 100.0, dt = 0.01
+  ```bash
+  python main.py -bc 4 -re 100
+  ```
+- Help
+  ```bash
+  python main.py -h
+  ```
 
 ## Screenshots
 
 ### Flow Visualization
 
 - Norm and Pressure
-  ![norm_and_pressure](./images/bc4_res800_re100_cip_vc1_norm.png)
+  ![norm_and_pressure](./images/bc4_res800_re1000_cip_vc4_norm.png)
 - Pressure
-  ![pressure](./images/bc4_res800_re100_cip_vc1_pressure.png)
+  ![pressure](./images/bc4_res800_re1000_cip_vc4_pressure.png)
 - Vorticity
-  ![vorticity](./images/bc4_res800_re100_cip_vc1_vorticity.png)
+  ![vorticity](./images/bc4_res800_re1000_cip_vc4_vorticity.png)
 - Dye
-  ![dye](./images/bc4_res800_re100_cip_vc1_dye.png)
+  ![dye](./images/bc4_res800_re1000_cip_vc4_dye.png)
 
 ### Vorticity Confinement
 
 - eps = 0.0
-  ![no_vorticity_confinement](./images/bc3_res800_re100_cip_vc0_dye.png)
-- eps = 1.0
-  ![vorticity_confinement](./images/bc3_res800_re100_cip_vc1_dye.png)
+  ![no_vorticity_confinement](./images/bc3_res800_re1000_cip_vc0_dye.png)
+- eps = 4.0
+  ![vorticity_confinement](./images/bc3_res800_re1000_cip_vc4_dye.png)
 
 ## References
 
