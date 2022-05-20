@@ -122,11 +122,11 @@ def create_boundary_condition1(resolution):
     bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint8)
 
     # 流入部の設定
-    bc[0, :] = np.array([10.0, 0.0])
+    bc[0, :] = np.array([20.0, 0.0])
     bc_mask[0, :] = 2
 
     # 流出部の設定
-    bc[-1, :] = np.array([10.0, 0.0])
+    bc[-1, :] = np.array([20.0, 0.0])
     bc_mask[-1, :] = 3
 
     # 壁の設定
@@ -174,11 +174,11 @@ def create_boundary_condition2(resolution):
 
     # 流入部の設定
     y_point = resolution // 6
-    bc[:2, 2 * y_point : 4 * y_point] = np.array([6.0, 0.0])
+    bc[:2, 2 * y_point : 4 * y_point] = np.array([15.0, 0.0])
     bc_mask[:2, 2 * y_point : 4 * y_point] = 2
 
     # 流出部の設定
-    bc[-2:, 2 * y_point : 4 * y_point] = np.array([6.0, 0.0])
+    bc[-2:, 2 * y_point : 4 * y_point] = np.array([15.0, 0.0])
     bc_mask[-2:, 2 * y_point : 4 * y_point] = 3
 
     return BoundaryCondition(bc, bc_mask)
@@ -189,11 +189,11 @@ def create_boundary_condition3(resolution):
     bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint8)
 
     # 流入部の設定
-    bc[0, :] = np.array([8.0, 0.0])
+    bc[0, :] = np.array([15.0, 0.0])
     bc_mask[0, :] = 2
 
     # 流出部の設定
-    bc[-1, :] = np.array([8.0, 0.0])
+    bc[-1, :] = np.array([15.0, 0.0])
     bc_mask[-1, :] = 3
 
     # 壁の設定
@@ -230,11 +230,11 @@ def create_boundary_condition4(resolution):
 
     # 流入部（下）の設定
     size = resolution // 5
-    bc[size : 2 * size, :2] = np.array([6.0, 12.0])
+    bc[size : 2 * size, :2] = np.array([8.0, 16.0])
     bc_mask[size : 2 * size, :2] = 2
 
     # 流入部（上）の設定
-    bc[-2 * size : -size, -2:] = np.array([-6.0, -12.0])
+    bc[-2 * size : -size, -2:] = np.array([-8.0, -16.0])
     bc_mask[-2 * size : -size, -2:] = 2
 
     return BoundaryCondition(bc, bc_mask)
@@ -247,7 +247,7 @@ def create_dye_boundary_condition1(resolution):
     bc_dye = np.zeros((2 * resolution, resolution, 3))
 
     # 流入部の設定
-    bc[:2, :] = np.array([10.0, 0.0])
+    bc[:2, :] = np.array([20.0, 0.0])
     bc_dye[:2, :] = np.array([0.2, 0.2, 1.2])
     width = resolution // 10
     for i in range(0, resolution, width):
@@ -255,7 +255,7 @@ def create_dye_boundary_condition1(resolution):
     bc_mask[:2, :] = 2
 
     # 流出部の設定
-    bc[-1, :] = np.array([10.0, 0.0])
+    bc[-1, :] = np.array([20.0, 0.0])
     bc_mask[-1, :] = 3
 
     # 壁の設定
@@ -278,7 +278,7 @@ def create_dye_boundary_condition2(resolution):
 
     # 流入部の設定
     y_point = resolution // 6
-    bc[:2, :] = np.array([6.0, 0.0])
+    bc[:2, :] = np.array([15.0, 0.0])
     bc_mask[:2, :] = 2
     bc_dye[:2, :] = np.array([0.2, 0.2, 1.2])
     width = resolution // 10
@@ -318,7 +318,7 @@ def create_dye_boundary_condition2(resolution):
 
     # 流出部の設定
     y_point = resolution // 6
-    bc[-2:, 2 * y_point : 4 * y_point] = np.array([6.0, 0.0])
+    bc[-2:, 2 * y_point : 4 * y_point] = np.array([15.0, 0.0])
     bc_mask[-2:, 2 * y_point : 4 * y_point] = 3
 
     return DyeBoundaryCondition(bc, bc_dye, bc_mask)
@@ -330,7 +330,7 @@ def create_dye_boundary_condition3(resolution):
     bc_dye = np.zeros((2 * resolution, resolution, 3))
 
     # 流入部の設定
-    bc[:2, :] = np.array([8.0, 0.0])
+    bc[:2, :] = np.array([15.0, 0.0])
     bc_dye[:2, :] = np.array([0.2, 0.2, 1.2])
     width = resolution // 10
     for i in range(0, resolution, width):
@@ -338,7 +338,7 @@ def create_dye_boundary_condition3(resolution):
     bc_mask[:2, :] = 2
 
     # 流出部の設定
-    bc[-1, :] = np.array([8.0, 0.0])
+    bc[-1, :] = np.array([15.0, 0.0])
     bc_mask[-1, :] = 3
 
     # 壁の設定
@@ -376,12 +376,12 @@ def create_dye_boundary_condition4(resolution):
 
     # 流入部（下）の設定
     size = resolution // 5
-    bc[size : 2 * size, :2] = np.array([6.0, 12.0])
+    bc[size : 2 * size, :2] = np.array([8.0, 16.0])
     bc_dye[size : 2 * size, :2] = np.array([1.2, 1.2, 0.2])
     bc_mask[size : 2 * size, :2] = 2
 
     # 流入部（上）の設定
-    bc[-2 * size : -size, -2:] = np.array([-6.0, -12.0])
+    bc[-2 * size : -size, -2:] = np.array([-8.0, -16.0])
     bc_dye[-2 * size : -size, -2:] = np.array([0.2, 0.2, 1.2])
     bc_mask[-2 * size : -size, -2:] = 2
 
