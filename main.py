@@ -21,7 +21,7 @@ def main():
     parser.add_argument(
         "-vis",
         "--visualization",
-        help="Visualization type",
+        help="Flow visualization type",
         type=int,
         choices=[0, 1, 2, 3],
         default=0,
@@ -31,7 +31,7 @@ def main():
         "--vorticity_confinement_eps",
         help="Vorticity Confinement eps. 0.0 is disable.",
         type=float,
-        default=1.0,
+        default=4.0,
     )
     parser.add_argument(
         "-scheme",
@@ -41,7 +41,7 @@ def main():
         choices=["upwind", "kk", "cip"],
         default="cip",
     )
-    parser.add_argument("-no_dye", "--no_dye", help="No calculate dye", action="store_true")
+    parser.add_argument("-no_dye", "--no_dye", help="No dye calculation", action="store_true")
 
     args = parser.parse_args()
 
