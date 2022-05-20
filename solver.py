@@ -143,69 +143,6 @@ class MacSolver(Solver):
 
 
 @ti.data_oriented
-class FsSolver(Solver):
-    """Fractional Step method"""
-
-    def __init__(self, boundary_condition, advect_function, dt, Re, p_iter, vor_epsilon=None):
-        super().__init__(boundary_condition, vor_epsilon)
-
-        self._advect = advect_function
-
-        self.dt = dt
-        self.Re = Re
-
-        self.v = ti.Vector.field(2, float, shape=self._resolution)  # velocity
-        self.p = DoubleBuffers(self._resolution, 1)  # pressure
-        self.tv = ti.Vector.field(2, float, shape=self._resolution)  # temp velocities
-
-        self.p_iter = p_iter
-
-        # initial condition
-        self.v.fill(ti.Vector([0.4, 0.0]))
-
-    def update(self):
-        self._bc.calc(self.v, self.p.current)
-        self._calc_temp_velocities(self.tv, self.v)
-
-        for _ in range(self.p_iter):
-            self._update_pressures(self.p.next, self.p.current, self.tv)
-            self.p.swap()
-
-        self._update_velocities(self.v, self.tv, self.p.current)
-
-    def get_fields(self):
-        return self.v, self.p.current
-
-    @ti.kernel
-    def _calc_temp_velocities(self, tv: ti.template(), v: ti.template()):
-        for i, j in tv:
-            if not self._bc.is_wall(i, j):
-                tv[i, j] = v[i, j] + self.dt * (
-                    -self._advect(v, v, i, j) + (diff2_x(v, i, j) + diff2_y(v, i, j)) / self.Re
-                )
-
-    @ti.kernel
-    def _update_pressures(self, pn: ti.template(), pc: ti.template(), tv: ti.template()):
-        for i, j in pn:
-            if not self._bc.is_wall(i, j):
-                pn[i, j] = 0.25 * (
-                    (
-                        sample(pc, i + 1, j)
-                        + sample(pc, i - 1, j)
-                        + sample(pc, i, j + 1)
-                        + sample(pc, i, j - 1)
-                    )
-                    - (diff_x(tv, i, j).x + diff_y(tv, i, j).y) / self.dt
-                )
-
-    @ti.kernel
-    def _update_velocities(self, v: ti.template(), tv: ti.template(), pc: ti.template()):
-        for i, j in v:
-            if not self._bc.is_wall(i, j):
-                v[i, j] = tv[i, j] - self.dt * ti.Vector([diff_x(pc, i, j), diff_y(pc, i, j)])
-
-
-@ti.data_oriented
 class DyeMacSolver(MacSolver):
     """Maker And Cell method"""
 
