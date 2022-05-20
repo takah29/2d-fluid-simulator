@@ -6,10 +6,6 @@ from boundary_condition import (
     create_boundary_condition2,
     create_boundary_condition3,
     create_boundary_condition4,
-    create_dye_boundary_condition1,
-    create_dye_boundary_condition2,
-    create_dye_boundary_condition3,
-    create_dye_boundary_condition4,
 )
 from solver import CipMacSolver, DyeCipMacSolver, DyeMacSolver, MacSolver
 from visualization import visualize_norm, visualize_pressure, visualize_vorticity
@@ -62,13 +58,13 @@ class FluidSimulator:
     @staticmethod
     def create(num, resolution, dt, re, vor_eps, scheme):
         if num == 1:
-            boundary_condition = create_boundary_condition1(resolution)
+            boundary_condition = create_boundary_condition1(resolution, no_dye=True)
         elif num == 2:
-            boundary_condition = create_boundary_condition2(resolution)
+            boundary_condition = create_boundary_condition2(resolution, no_dye=True)
         elif num == 3:
-            boundary_condition = create_boundary_condition3(resolution)
+            boundary_condition = create_boundary_condition3(resolution, no_dye=True)
         elif num == 4:
-            boundary_condition = create_boundary_condition4(resolution)
+            boundary_condition = create_boundary_condition4(resolution, no_dye=True)
         else:
             raise NotImplementedError
 
@@ -100,13 +96,13 @@ class DyeFluidSimulator(FluidSimulator):
     @staticmethod
     def create(num, resolution, dt, re, vor_eps, scheme):
         if num == 1:
-            boundary_condition = create_dye_boundary_condition1(resolution)
+            boundary_condition = create_boundary_condition1(resolution, no_dye=False)
         elif num == 2:
-            boundary_condition = create_dye_boundary_condition2(resolution)
+            boundary_condition = create_boundary_condition2(resolution, no_dye=False)
         elif num == 3:
-            boundary_condition = create_dye_boundary_condition3(resolution)
+            boundary_condition = create_boundary_condition3(resolution, no_dye=False)
         elif num == 4:
-            boundary_condition = create_dye_boundary_condition4(resolution)
+            boundary_condition = create_boundary_condition4(resolution, no_dye=False)
         else:
             raise NotImplementedError
 
