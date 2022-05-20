@@ -1,7 +1,7 @@
 # 2D Fluid Simulator
 
-![baundary_condition_2_dye](images/bc2_res1600_re100_cip_vc1_dye.jpg)
-![baundary_condition_2_norm](images/bc2_res1600_re100_cip_vc1_norm.jpg)
+![baundary_condition_2_dye](./images/bc2_res1600_re100_cip_vc1_dye.jpg)
+![baundary_condition_2_norm](./images/bc2_res1600_re100_cip_vc1_norm.jpg)
 
 ## Features
 
@@ -50,6 +50,13 @@ GeForce GTX 1080 or higher recommended.
 - Help
   ```bash
   python main.py -h
+  ```
+
+### For CPU
+
+- Boundary Condition 2, Reynolds Number = 100.0, resolution = 200, dt = 0.01
+  ```bash
+  python main.py -bc 2 -re 100.0 -res 200 -cpu
   ```
 
 ## Screenshots

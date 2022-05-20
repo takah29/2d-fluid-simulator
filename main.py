@@ -42,11 +42,15 @@ def main():
         default="cip",
     )
     parser.add_argument("-no_dye", "--no_dye", help="No dye calculation", action="store_true")
+    parser.add_argument("-cpu", "--cpu", action="store_true")
 
     args = parser.parse_args()
 
-    arch = ti.vulkan if ti._lib.core.with_vulkan() else ti.cuda
-    ti.init(arch=arch)
+    if args.cpu:
+        ti.init(arch=ti.cpu)
+    else:
+        arch = ti.vulkan if ti._lib.core.with_vulkan() else ti.cuda
+        ti.init(arch=arch)
 
     n_bc = args.boundary_condition
     dt = args.time_step
