@@ -1,20 +1,9 @@
 from abc import ABCMeta, abstractmethod
 
 import taichi as ti
-from advection import vorticity_vec
 
-from differentiation import (
-    sample,
-    sign,
-    diff_x,
-    diff_y,
-    fdiff_x,
-    fdiff_y,
-    bdiff_x,
-    bdiff_y,
-    diff2_x,
-    diff2_y,
-)
+from advection import vorticity_vec
+from differentiation import diff2_x, diff2_y, diff_x, diff_y, sample, sign
 
 
 class DoubleBuffers:
@@ -58,6 +47,11 @@ class Solver(metaclass=ABCMeta):
         return self._bc.is_wall(i, j)
 
     @ti.kernel
+    def _clamp_field(self, field: ti.template(), low: float, high: float):
+        for i, j in field:
+            field[i, j] = ti.max(ti.min(field[i, j], high), low)
+
+    @ti.kernel
     def _calc_vorticity(self, vor: ti.template(), vor_abs: ti.template(), vc: ti.template()):
         for i, j in vor:
             if not self._bc.is_wall(i, j):
@@ -99,6 +93,7 @@ class MacSolver(Solver):
     def update(self):
         self._bc.calc(self.v.current, self.p.current)
         self._update_velocities(self.v.next, self.v.current, self.p.current)
+        self._clamp_field(self.v.next, -40.0, 40.0)
         self.v.swap()
 
         if self.vor_epsilon is not None:
@@ -221,6 +216,7 @@ class DyeMacSolver(MacSolver):
     def update(self):
         self._bc.calc(self.v.current, self.p.current, self.dye.current)
         self._update_velocities(self.v.next, self.v.current, self.p.current)
+        self._clamp_field(self.v.next, -40.0, 40.0)  # 発散しないようにクランプする
         self.v.swap()
 
         if self.vor_epsilon is not None:
@@ -235,6 +231,7 @@ class DyeMacSolver(MacSolver):
 
         self._bc.calc(self.v.current, self.p.current, self.dye.current)
         self._update_dye(self.dye.next, self.dye.current, self.v.current)
+        self._clamp_field(self.dye.next, 0.0, 1.0)  # 発散しないようにクランプする
         self.dye.swap()
 
     def get_fields(self):
@@ -244,7 +241,7 @@ class DyeMacSolver(MacSolver):
     def _update_dye(self, dn: ti.template(), dc: ti.template(), vc: ti.template()):
         for i, j in dn:
             if not self._bc.is_wall(i, j):
-                dn[i, j] = ti.max(ti.min(dc[i, j] - self.dt * self._advect(vc, dc, i, j), 1.0), 0.0)
+                dn[i, j] = dc[i, j] - self.dt * self._advect(vc, dc, i, j)
 
 
 @ti.data_oriented
@@ -278,6 +275,9 @@ class CipMacSolver(Solver):
     def update(self):
         self._bc.calc(self.v.current, self.p.current)
         self._update_velocities(self.v, self.vx, self.vy, self.p)
+        self._clamp_field(self.v.current, -40.0, 40.0)
+        self._clamp_field(self.vx.current, -20.0, 20.0)
+        self._clamp_field(self.vy.current, -20.0, 20.0)
 
         if self.vor_epsilon is not None:
             self._calc_vorticity(self.vor, self.vor_abs, self.v.current)
@@ -314,14 +314,6 @@ class CipMacSolver(Solver):
         v.swap()
         vx.swap()
         vy.swap()
-        self._clamp_velocity(v.current, vx.current, vy.current)
-
-    @ti.kernel
-    def _clamp_velocity(self, v: ti.template(), vx: ti.template(), vy: ti.template()):
-        for i, j in v:
-            v[i, j] = ti.max(ti.min(v[i, j], 40.0), -40.0)
-            vx[i, j] = ti.max(ti.min(vx[i, j], 20.0), -20.0)
-            vy[i, j] = ti.max(ti.min(vy[i, j], 20.0), -20.0)
 
     @ti.kernel
     def _non_advection_phase(
@@ -476,6 +468,9 @@ class DyeCipMacSolver(CipMacSolver):
     def update(self):
         self._bc.calc(self.v.current, self.p.current, self.dye.current)
         self._update_velocities(self.v, self.vx, self.vy, self.p)
+        self._clamp_field(self.v.current, -40.0, 40.0)
+        self._clamp_field(self.vx.current, -20.0, 20.0)
+        self._clamp_field(self.vy.current, -20.0, 20.0)
 
         if self.vor_epsilon is not None:
             self._calc_vorticity(self.vor, self.vor_abs, self.v.current)
@@ -494,6 +489,9 @@ class DyeCipMacSolver(CipMacSolver):
             self.dyey,
             self.v,
         )
+        self._clamp_field(self.dye.current, 0.0, 1.0)
+        self._clamp_field(self.dyex.current, -1.0, 1.0)
+        self._clamp_field(self.dyey.current, -1.0, 1.0)
 
     def get_fields(self):
         return self.v.current, self.p.current, self.dye.current
@@ -510,13 +508,6 @@ class DyeCipMacSolver(CipMacSolver):
             if not self._bc.is_wall(i, j):
                 dn[i, j] = dc[i, j] + self._calc_diffusion(dc, i, j) * self.dt
 
-    @ti.kernel
-    def _clamp_dye(self, d: ti.template(), dx: ti.template(), dy: ti.template()):
-        for i, j in d:
-            d[i, j] = ti.max(ti.min(d[i, j], 1.0), 0.0)
-            dx[i, j] = ti.max(ti.min(dx[i, j], 1.0), -1.0)
-            dy[i, j] = ti.max(ti.min(dy[i, j], 1.0), -1.0)
-
     def _update_dye(self, dye, dyex, dyey, v):
         self._non_advection_phase_dye(dye.next, dye.current)
         self._non_advection_phase_grad(
@@ -532,4 +523,3 @@ class DyeCipMacSolver(CipMacSolver):
         dye.swap()
         dyex.swap()
         dyey.swap()
-        self._clamp_dye(dye.current, dyex.current, dyey.current)
