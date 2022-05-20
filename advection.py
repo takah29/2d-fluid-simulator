@@ -1,18 +1,6 @@
 import taichi as ti
 
-from differentiation import (
-    sample,
-    diff_x,
-    diff_y,
-    fdiff_x,
-    fdiff_y,
-    bdiff_x,
-    bdiff_y,
-    diff2_x,
-    diff2_y,
-    diff3_x,
-    diff3_y,
-)
+from differentiation import diff_x, diff_y, fdiff_x, fdiff_y, sample
 
 
 @ti.func
