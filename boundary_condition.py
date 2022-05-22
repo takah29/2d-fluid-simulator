@@ -61,9 +61,9 @@ class BoundaryCondition:
 
     @staticmethod
     def _to_field(bc, bc_mask):
-        bc_field = ti.Vector.field(2, ti.types.f64, shape=(bc.shape[0], bc.shape[1]))
+        bc_field = ti.Vector.field(2, ti.f32, shape=(bc.shape[0], bc.shape[1]))
         bc_field.from_numpy(bc)
-        bc_mask_field = ti.field(ti.types.u8, shape=(bc_mask.shape[0], bc_mask.shape[1]))
+        bc_mask_field = ti.field(ti.u8, shape=(bc_mask.shape[0], bc_mask.shape[1]))
         bc_mask_field.from_numpy(bc_mask)
 
         return bc_field, bc_mask_field
@@ -101,11 +101,11 @@ class DyeBoundaryCondition(BoundaryCondition):
 
     @staticmethod
     def _to_field(bc, bc_dye, bc_mask):
-        bc_field = ti.Vector.field(2, ti.types.f64, shape=(bc.shape[0], bc.shape[1]))
+        bc_field = ti.Vector.field(2, ti.f32, shape=(bc.shape[0], bc.shape[1]))
         bc_field.from_numpy(bc)
-        bc_dye_field = ti.Vector.field(3, ti.types.f64, shape=(bc_dye.shape[0], bc_dye.shape[1]))
+        bc_dye_field = ti.Vector.field(3, ti.f32, shape=(bc_dye.shape[0], bc_dye.shape[1]))
         bc_dye_field.from_numpy(bc_dye)
-        bc_mask_field = ti.field(ti.types.u8, shape=(bc_mask.shape[0], bc_mask.shape[1]))
+        bc_mask_field = ti.field(ti.u8, shape=(bc_mask.shape[0], bc_mask.shape[1]))
         bc_mask_field.from_numpy(bc_mask)
 
         return bc_field, bc_dye_field, bc_mask_field
@@ -119,7 +119,7 @@ class DyeBoundaryCondition(BoundaryCondition):
 def create_boundary_condition1(resolution, no_dye=False):
     # 1: 壁, 2: 流入部, 3: 流出部
     bc = np.zeros((2 * resolution, resolution, 2))
-    bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint8)
+    bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint32)
     bc_dye = np.zeros((2 * resolution, resolution, 3))
 
     # 流入部の設定
@@ -154,7 +154,7 @@ def create_boundary_condition1(resolution, no_dye=False):
 
 def create_boundary_condition2(resolution, no_dye=False):
     bc = np.zeros((2 * resolution, resolution, 2))
-    bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint8)
+    bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint32)
     bc_dye = np.zeros((2 * resolution, resolution, 3))
 
     # 流入部の設定
@@ -212,7 +212,7 @@ def create_boundary_condition2(resolution, no_dye=False):
 
 def create_boundary_condition3(resolution, no_dye=False):
     bc = np.zeros((2 * resolution, resolution, 2))
-    bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint8)
+    bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint32)
     bc_dye = np.zeros((2 * resolution, resolution, 3))
 
     # 流入部の設定
@@ -252,7 +252,7 @@ def create_boundary_condition3(resolution, no_dye=False):
 
 def create_boundary_condition4(resolution, no_dye=False):
     bc = np.zeros((2 * resolution, resolution, 2))
-    bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint8)
+    bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint32)
     bc_dye = np.zeros((2 * resolution, resolution, 3))
 
     # 壁の設定
