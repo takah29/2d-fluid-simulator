@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 
 import taichi as ti
 
@@ -69,24 +70,15 @@ def main():
     else:
         fluid_sim = DyeFluidSimulator.create(n_bc, resolution, dt, re, vor_eps, scheme)
 
-    video_manager = ti.tools.VideoManager(output_dir="result", framerate=30, automatic_build=False)
+    img_path = Path(__file__).parent.resolve() / "result"
+
+    # video_manager = ti.tools.VideoManager(output_dir=str(img_path), framerate=30, automatic_build=False)
 
     n_vis = 3 if no_dye else 4
     count = 0
+    ss_count = 0
     paused = False
-    img = None
     while window.running:
-        if window.get_event(ti.ui.PRESS):
-            e = window.event
-            if e.key == ti.ui.ESCAPE:
-                break
-            elif e.key == "p":
-                paused = not paused
-            elif e.key == "v":
-                vis_num = (vis_num + 1) % n_vis
-            elif e.key == "s":
-                video_manager.write_frame(img)
-
         if not paused:
             fluid_sim.step()
 
@@ -101,11 +93,23 @@ def main():
         else:
             raise NotImplementedError()
 
-        if count % 20 == 0:
-            canvas.set_image(img)
-            window.show()
+        if window.get_event(ti.ui.PRESS):
+            e = window.event
+            if e.key == ti.ui.ESCAPE:
+                break
+            elif e.key == "p":
+                paused = not paused
+            elif e.key == "v":
+                vis_num = (vis_num + 1) % n_vis
+            elif e.key == "s":
+                img_path.mkdir(exist_ok=True)
+                ti.tools.imwrite(img, str(img_path / f"{ss_count:04}.png"))
+                ss_count += 1
 
-        # if count % 100 == 0:
+        canvas.set_image(img)
+        window.show()
+
+        # if count % 20 == 0:
         #     video_manager.write_frame(img)
 
         count += 1
