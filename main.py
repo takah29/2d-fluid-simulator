@@ -46,12 +46,6 @@ def main():
 
     args = parser.parse_args()
 
-    if args.cpu:
-        ti.init(arch=ti.cpu)
-    else:
-        arch = ti.vulkan if ti._lib.core.with_vulkan() else ti.cuda
-        ti.init(arch=arch)
-
     n_bc = args.boundary_condition
     dt = args.time_step
     re = args.reynolds_num
@@ -60,6 +54,12 @@ def main():
     no_dye = args.no_dye
     scheme = args.advection_scheme
     vor_eps = args.vorticity_confinement_eps if args.vorticity_confinement_eps != 0.0 else None
+
+    if args.cpu:
+        ti.init(arch=ti.cpu)
+    else:
+        device_memory_GB = 2.0 if resolution > 1000 else 1.0
+        ti.init(arch=ti.gpu, device_memory_GB=device_memory_GB)
 
     window = ti.ui.Window("Fluid Simulation", (2 * resolution, resolution), vsync=False)
     canvas = window.get_canvas()
