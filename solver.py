@@ -128,6 +128,8 @@ class MacSolver(Solver):
     def _update_pressures(self, pn: ti.template(), pc: ti.template(), vc: ti.template()):
         for i, j in pn:
             if not self._bc.is_wall(i, j):
+                dx = diff_x(vc, i, j)
+                dy = diff_y(vc, i, j)
                 pn[i, j] = (
                     (
                         sample(pc, i + 1, j)
@@ -135,10 +137,10 @@ class MacSolver(Solver):
                         + sample(pc, i, j + 1)
                         + sample(pc, i, j - 1)
                     )
-                    - (diff_x(vc, i, j).x + diff_y(vc, i, j).y) / self.dt
-                    + diff_x(vc, i, j).x ** 2
-                    + diff_y(vc, i, j).y ** 2
-                    + 2 * diff_y(vc, i, j).x * diff_x(vc, i, j).y
+                    - (dx.x + dy.y) / self.dt
+                    + dx.x ** 2
+                    + dy.y ** 2
+                    + 2 * dy.x * dx.y
                 ) * 0.25
 
 
@@ -263,12 +265,15 @@ class CipMacSolver(Solver):
         for i, j in fn:
             # 移流量の更新
             if not self._bc.is_wall(i, j):
-                G = -ti.Vector(
-                    [
-                        diff_x(pc, i, j),
-                        diff_y(pc, i, j),
-                    ]
-                ) + self._calc_diffusion(fc, i, j)
+                G = (
+                    -ti.Vector(
+                        [
+                            diff_x(pc, i, j),
+                            diff_y(pc, i, j),
+                        ]
+                    )
+                    + self._calc_diffusion(fc, i, j)
+                )
                 fn[i, j] = fc[i, j] + G * self.dt
 
     @ti.kernel
@@ -292,16 +297,6 @@ class CipMacSolver(Solver):
                 fyn[i, j] = (
                     fyc[i, j] + (fn[i, j + 1] - fc[i, j + 1] - fn[i, j - 1] + fc[i, j - 1]) / 2.0
                 )
-
-    @ti.func
-    def _cip_non_advect(self, fn, fc, pc, i, j):
-        G = -ti.Vector(
-            [
-                diff_x(pc, i, j),
-                diff_y(pc, i, j),
-            ]
-        ) + self._calc_diffusion(fc, i, j)
-        fn[i, j] = fc[i, j] + G * self.dt
 
     @ti.func
     def _calc_diffusion(self, fc, i, j):
@@ -361,6 +356,8 @@ class CipMacSolver(Solver):
     def _update_pressures(self, pn: ti.template(), pc: ti.template(), fc: ti.template()):
         for i, j in pn:
             if not self._bc.is_wall(i, j):
+                dx = diff_x(fc, i, j)
+                dy = diff_y(fc, i, j)
                 pn[i, j] = (
                     (
                         sample(pc, i + 1, j)
@@ -368,10 +365,10 @@ class CipMacSolver(Solver):
                         + sample(pc, i, j + 1)
                         + sample(pc, i, j - 1)
                     )
-                    - (diff_x(fc, i, j).x + diff_y(fc, i, j).y) / self.dt
-                    + diff_x(fc, i, j).x ** 2
-                    + diff_y(fc, i, j).y ** 2
-                    + 2 * diff_y(fc, i, j).x * diff_x(fc, i, j).y
+                    - (dx.x + dy.y) / self.dt
+                    + dx.x ** 2
+                    + dy.y ** 2
+                    + 2 * dy.x * dx.y
                 ) * 0.25
 
 
