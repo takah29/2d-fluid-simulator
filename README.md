@@ -64,20 +64,20 @@ GeForce GTX 1080 or higher recommended.
 ### Flow Visualization
 
 - Norm and Pressure
-  ![norm_and_pressure](./images/bc4_res800_re1000_cip_vc4_norm.png)
+  ![norm_and_pressure](./images/bc4_res800_re1000_cip_vc4_norm.jpg)
 - Pressure
-  ![pressure](./images/bc4_res800_re1000_cip_vc4_pressure.png)
+  ![pressure](./images/bc4_res800_re1000_cip_vc4_pressure.jpg)
 - Vorticity
-  ![vorticity](./images/bc4_res800_re1000_cip_vc4_vorticity.png)
+  ![vorticity](./images/bc4_res800_re1000_cip_vc4_vorticity.jpg)
 - Dye
-  ![dye](./images/bc4_res800_re1000_cip_vc4_dye.png)
+  ![dye](./images/bc4_res800_re1000_cip_vc4_dye.jpg)
 
 ### Vorticity Confinement
 
 - eps = 0.0
-  ![no_vorticity_confinement](./images/bc3_res800_re1000_cip_vc0_dye.png)
+  ![no_vorticity_confinement](./images/bc3_res800_re1000_cip_vc0_dye.jpg)
 - eps = 4.0
-  ![vorticity_confinement](./images/bc3_res800_re1000_cip_vc4_dye.png)
+  ![vorticity_confinement](./images/bc3_res800_re1000_cip_vc4_dye.jpg)
 
 ## References
 
