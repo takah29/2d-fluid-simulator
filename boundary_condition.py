@@ -14,7 +14,7 @@ class BoundaryCondition:
             self._set_wall_bc(vc, bc_const, bc_mask, i, j)
             self._set_inflow_bc(vc, bc_const, bc_mask, i, j)
             self._set_outflow_bc(vc, pc, bc_mask, i, j)
-            if 0 < i < vc.shape[0] and 0 < j < vc.shape[1]:
+            if 0 < i < vc.shape[0] - 1 and 0 < j < vc.shape[1] - 1:
                 self._set_inside_wall_bc(vc, pc, bc_mask, i, j)
 
     @ti.func
@@ -61,9 +61,9 @@ class BoundaryCondition:
 
     @staticmethod
     def _to_field(bc, bc_mask):
-        bc_field = ti.Vector.field(2, ti.f32, shape=(bc.shape[0], bc.shape[1]))
+        bc_field = ti.Vector.field(2, ti.f32, shape=bc.shape[:2])
         bc_field.from_numpy(bc)
-        bc_mask_field = ti.field(ti.u8, shape=(bc_mask.shape[0], bc_mask.shape[1]))
+        bc_mask_field = ti.field(ti.u8, shape=bc_mask.shape[:2])
         bc_mask_field.from_numpy(bc_mask)
 
         return bc_field, bc_mask_field
@@ -96,16 +96,16 @@ class DyeBoundaryCondition(BoundaryCondition):
             self._set_inflow_bc(vc, bc_const, bc_mask, i, j)
             self._set_indye_bc(dye, bc_dye, bc_mask, i, j)
             self._set_outflow_bc(vc, pc, bc_mask, i, j)
-            if 0 < i < vc.shape[0] and 0 < j < vc.shape[1]:
+            if 0 < i < vc.shape[0] - 1 and 0 < j < vc.shape[1] - 1:
                 self._set_inside_wall_bc(vc, pc, bc_mask, i, j)
 
     @staticmethod
     def _to_field(bc, bc_dye, bc_mask):
-        bc_field = ti.Vector.field(2, ti.f32, shape=(bc.shape[0], bc.shape[1]))
+        bc_field = ti.Vector.field(2, ti.f32, shape=bc.shape[:2])
         bc_field.from_numpy(bc)
-        bc_dye_field = ti.Vector.field(3, ti.f32, shape=(bc_dye.shape[0], bc_dye.shape[1]))
+        bc_dye_field = ti.Vector.field(3, ti.f32, shape=bc_dye.shape[:2])
         bc_dye_field.from_numpy(bc_dye)
-        bc_mask_field = ti.field(ti.u8, shape=(bc_mask.shape[0], bc_mask.shape[1]))
+        bc_mask_field = ti.field(ti.u8, shape=bc_mask.shape[:2])
         bc_mask_field.from_numpy(bc_mask)
 
         return bc_field, bc_dye_field, bc_mask_field
