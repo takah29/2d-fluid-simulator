@@ -118,9 +118,9 @@ class DyeBoundaryCondition(BoundaryCondition):
 
 def create_boundary_condition1(resolution, no_dye=False):
     # 1: 壁, 2: 流入部, 3: 流出部
-    bc = np.zeros((2 * resolution, resolution, 2))
+    bc = np.zeros((2 * resolution, resolution, 2), dtype=np.float32)
     bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint32)
-    bc_dye = np.zeros((2 * resolution, resolution, 3))
+    bc_dye = np.zeros((2 * resolution, resolution, 3), dtype=np.float32)
 
     # 流入部の設定
     bc[:2, :] = np.array([20.0, 0.0])
@@ -153,9 +153,9 @@ def create_boundary_condition1(resolution, no_dye=False):
 
 
 def create_boundary_condition2(resolution, no_dye=False):
-    bc = np.zeros((2 * resolution, resolution, 2))
+    bc = np.zeros((2 * resolution, resolution, 2), dtype=np.float32)
     bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint32)
-    bc_dye = np.zeros((2 * resolution, resolution, 3))
+    bc_dye = np.zeros((2 * resolution, resolution, 3), dtype=np.float32)
 
     # 流入部の設定
     y_point = resolution // 6
@@ -211,9 +211,9 @@ def create_boundary_condition2(resolution, no_dye=False):
 
 
 def create_boundary_condition3(resolution, no_dye=False):
-    bc = np.zeros((2 * resolution, resolution, 2))
+    bc = np.zeros((2 * resolution, resolution, 2), dtype=np.float32)
     bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint32)
-    bc_dye = np.zeros((2 * resolution, resolution, 3))
+    bc_dye = np.zeros((2 * resolution, resolution, 3), dtype=np.float32)
 
     # 流入部の設定
     bc[:2, :] = np.array([15.0, 0.0])
@@ -251,9 +251,9 @@ def create_boundary_condition3(resolution, no_dye=False):
 
 
 def create_boundary_condition4(resolution, no_dye=False):
-    bc = np.zeros((2 * resolution, resolution, 2))
+    bc = np.zeros((2 * resolution, resolution, 2), dtype=np.float32)
     bc_mask = np.zeros((2 * resolution, resolution), dtype=np.uint32)
-    bc_dye = np.zeros((2 * resolution, resolution, 3))
+    bc_dye = np.zeros((2 * resolution, resolution, 3), dtype=np.float32)
 
     # 壁の設定
     bc[:2, :] = np.array([0.0, 0.0])
