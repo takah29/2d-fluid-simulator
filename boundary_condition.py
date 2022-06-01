@@ -8,7 +8,7 @@ class BoundaryCondition:
         self._bc_const, self._bc_mask = BoundaryCondition._to_field(bc_const, bc_mask)
 
     @ti.kernel
-    def calc(self, vc: ti.template(), pc: ti.template()):
+    def set_boundary_condition(self, vc: ti.template(), pc: ti.template()):
         bc_const, bc_mask = ti.static(self._bc_const, self._bc_mask)
         for i, j in vc:
             self._set_wall_bc(vc, bc_const, bc_mask, i, j)
@@ -89,7 +89,7 @@ class DyeBoundaryCondition(BoundaryCondition):
         )
 
     @ti.kernel
-    def calc(self, vc: ti.template(), pc: ti.template(), dye: ti.template()):
+    def set_boundary_condition(self, vc: ti.template(), pc: ti.template(), dye: ti.template()):
         bc_const, bc_dye, bc_mask = ti.static(self._bc_const, self._bc_dye, self._bc_mask)
         for i, j in vc:
             self._set_wall_bc(vc, bc_const, bc_mask, i, j)

@@ -91,7 +91,7 @@ class MacSolver(Solver):
         self.v.current.fill(ti.Vector([0.4, 0.0]))
 
     def update(self):
-        self._bc.calc(self.v.current, self.p.current)
+        self._bc.set_boundary_condition(self.v.current, self.p.current)
         self._update_velocities(self.v.next, self.v.current, self.p.current)
         self._clamp_field(self.v.next, -40.0, 40.0)
         self.v.swap()
@@ -101,7 +101,7 @@ class MacSolver(Solver):
             self._add_vorticity(self.v.next, self.v.current, self.vor, self.vor_abs)
             self.v.swap()
 
-        self._bc.calc(self.v.current, self.p.current)
+        self._bc.set_boundary_condition(self.v.current, self.p.current)
         for _ in range(self.p_iter):
             self._update_pressures(self.p.next, self.p.current, self.v.current)
             self.p.swap()
@@ -153,7 +153,7 @@ class DyeMacSolver(MacSolver):
         self.dye = DoubleBuffers(self._resolution, 3)  # dye
 
     def update(self):
-        self._bc.calc(self.v.current, self.p.current, self.dye.current)
+        self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
         self._update_velocities(self.v.next, self.v.current, self.p.current)
         self._clamp_field(self.v.next, -40.0, 40.0)  # 発散しないようにクランプする
         self.v.swap()
@@ -163,12 +163,12 @@ class DyeMacSolver(MacSolver):
             self._add_vorticity(self.v.next, self.v.current, self.vor, self.vor_abs)
             self.v.swap()
 
-        self._bc.calc(self.v.current, self.p.current, self.dye.current)
+        self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
         for _ in range(self.p_iter):
             self._update_pressures(self.p.next, self.p.current, self.v.current)
             self.p.swap()
 
-        self._bc.calc(self.v.current, self.p.current, self.dye.current)
+        self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
         self._update_dye(self.dye.next, self.dye.current, self.v.current)
         self._clamp_field(self.dye.next, 0.0, 1.0)  # 発散しないようにクランプする
         self.dye.swap()
@@ -207,12 +207,12 @@ class CipMacSolver(Solver):
         self.vx.reset()
         self.vy.reset()
 
-        self._bc.calc(self.v.current, self.p.current)
+        self._bc.set_boundary_condition(self.v.current, self.p.current)
         self._calc_grad_x(self.vx.current, self.v.current)
         self._calc_grad_y(self.vy.current, self.v.current)
 
     def update(self):
-        self._bc.calc(self.v.current, self.p.current)
+        self._bc.set_boundary_condition(self.v.current, self.p.current)
         self._update_velocities(self.v, self.vx, self.vy, self.p)
         self._clamp_field(self.v.current, -40.0, 40.0)
         self._clamp_field(self.vx.current, -20.0, 20.0)
@@ -223,7 +223,7 @@ class CipMacSolver(Solver):
             self._add_vorticity(self.v.next, self.v.current, self.vor, self.vor_abs)
             self.v.swap()
 
-        self._bc.calc(self.v.current, self.p.current)
+        self._bc.set_boundary_condition(self.v.current, self.p.current)
         for _ in range(self.p_iter):
             self._update_pressures(self.p.next, self.p.current, self.v.current)
             self.p.swap()
@@ -392,7 +392,7 @@ class DyeCipMacSolver(CipMacSolver):
         self.dyey.reset()
 
         self.dye.current.copy_from(self._bc._bc_dye)
-        self._bc.calc(self.v.current, self.p.current, self.dye.current)
+        self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
         self._calc_grad_x(self.vx.current, self.v.current)
         self._calc_grad_y(self.vy.current, self.v.current)
 
@@ -400,7 +400,7 @@ class DyeCipMacSolver(CipMacSolver):
         self._calc_grad_y(self.dyey.current, self.dye.current)
 
     def update(self):
-        self._bc.calc(self.v.current, self.p.current, self.dye.current)
+        self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
         self._update_velocities(self.v, self.vx, self.vy, self.p)
         self._clamp_field(self.v.current, -40.0, 40.0)
         self._clamp_field(self.vx.current, -20.0, 20.0)
@@ -411,12 +411,12 @@ class DyeCipMacSolver(CipMacSolver):
             self._add_vorticity(self.v.next, self.v.current, self.vor, self.vor_abs)
             self.v.swap()
 
-        self._bc.calc(self.v.current, self.p.current, self.dye.current)
+        self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
         for _ in range(self.p_iter):
             self._update_pressures(self.p.next, self.p.current, self.v.current)
             self.p.swap()
 
-        self._bc.calc(self.v.current, self.p.current, self.dye.current)
+        self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
         self._update_dye(
             self.dye,
             self.dyex,
