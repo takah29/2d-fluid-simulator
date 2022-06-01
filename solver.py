@@ -208,6 +208,7 @@ class CipMacSolver(Solver):
         self.vy.reset()
 
         self._bc.set_boundary_condition(self.v.current, self.p.current)
+
         self._calc_grad_x(self.vx.current, self.v.current)
         self._calc_grad_y(self.vy.current, self.v.current)
 
@@ -247,6 +248,7 @@ class CipMacSolver(Solver):
         v.swap()
         vx.swap()
         vy.swap()
+
         self._advection_phase(
             v.next, vx.next, vy.next, v.current, vx.current, vy.current, v.current
         )
@@ -263,7 +265,6 @@ class CipMacSolver(Solver):
     ):
         """中間量の計算"""
         for i, j in fn:
-            # 移流量の更新
             if not self._bc.is_wall(i, j):
                 G = (
                     -ti.Vector(
@@ -286,9 +287,8 @@ class CipMacSolver(Solver):
         fc: ti.template(),
         fn: ti.template(),
     ):
-        """中間量の計算"""
+        """中間量の勾配の計算"""
         for i, j in fn:
-            # 移流量の更新
             if not self._bc.is_wall(i, j):
                 # 勾配の更新
                 fxn[i, j] = (
@@ -339,6 +339,7 @@ class CipMacSolver(Solver):
         X = -v[i, j].x * self.dt
         Y = -v[i, j].y * self.dt
 
+        # 移流量の更新
         fn[i, j] = (
             ((a * X + c * Y + e) * X + g * Y + fxc[i, j]) * X
             + ((b * Y + d * X + f) * Y + fyc[i, j]) * Y
@@ -349,8 +350,10 @@ class CipMacSolver(Solver):
         Fx = (3.0 * a * X + 2.0 * c * Y + 2.0 * e) * X + (d * Y + g) * Y + fxc[i, j]
         Fy = (3.0 * b * Y + 2.0 * d * X + 2.0 * f) * Y + (c * X + g) * X + fyc[i, j]
 
-        fxn[i, j] = Fx - self.dt * (Fx * diff_x(v, i, j).x + Fy * diff_x(v, i, j).y) / 2.0
-        fyn[i, j] = Fy - self.dt * (Fx * diff_y(v, i, j).x + Fy * diff_y(v, i, j).y) / 2.0
+        dx = diff_x(v, i, j)
+        dy = diff_y(v, i, j)
+        fxn[i, j] = Fx - self.dt * (Fx * dx.x + Fy * dx.y) / 2.0
+        fyn[i, j] = Fy - self.dt * (Fx * dy.x + Fy * dy.y) / 2.0
 
     @ti.kernel
     def _update_pressures(self, pn: ti.template(), pc: ti.template(), fc: ti.template()):
@@ -393,6 +396,7 @@ class DyeCipMacSolver(CipMacSolver):
 
         self.dye.current.copy_from(self._bc._bc_dye)
         self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
+
         self._calc_grad_x(self.vx.current, self.v.current)
         self._calc_grad_y(self.vy.current, self.v.current)
 
@@ -438,7 +442,6 @@ class DyeCipMacSolver(CipMacSolver):
     ):
         """中間量の計算"""
         for i, j in dn:
-            # 移流量の更新
             if not self._bc.is_wall(i, j):
                 dn[i, j] = dc[i, j] + self._calc_diffusion(dc, i, j) * self.dt
 
