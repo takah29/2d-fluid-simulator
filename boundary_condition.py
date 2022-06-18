@@ -43,21 +43,39 @@ class BoundaryCondition:
 
     @ti.func
     def _set_inside_wall_bc(self, vc, pc, bc_mask, i, j):
-        """壁内部の境界条件を設定する"""
+        """壁内部の境界条件を設定する
 
+        ※ 壁の厚さは片側2ピクセル以上を仮定
+        """
         if bc_mask[i, j] == 1:
-            if bc_mask[i - 1, j] == 0 and bc_mask[i + 1, j] == 1:
-                vc[i + 1, j].x = vc[i - 1, j].x
+            if bc_mask[i - 1, j] == 0 and bc_mask[i, j - 1] == 1 and bc_mask[i, j + 1] == 1:
+                vc[i, j] = -vc[i - 1, j]
                 pc[i, j] = pc[i - 1, j]
-            if bc_mask[i - 1, j] == 1 and bc_mask[i + 1, j] == 0:
-                vc[i - 1, j].x = vc[i + 1, j].x
+                vc[i + 1, j] = -vc[i - 2, j]  # for kk scheme
+            elif bc_mask[i + 1, j] == 0 and bc_mask[i, j - 1] == 1 and bc_mask[i, j + 1] == 1:
+                vc[i, j] = -vc[i + 1, j]
                 pc[i, j] = pc[i + 1, j]
-            if bc_mask[i, j - 1] == 0 and bc_mask[i, j + 1] == 1:
-                vc[i, j + 1].y = vc[i, j - 1].y
+                vc[i - 1, j] = -vc[i + 2, j]  # for kk scheme
+            elif bc_mask[i, j - 1] == 0 and bc_mask[i - 1, j] == 1 and bc_mask[i + 1, j] == 1:
+                vc[i, j] = -vc[i, j - 1]
                 pc[i, j] = pc[i, j - 1]
-            if bc_mask[i, j - 1] == 1 and bc_mask[i, j + 1] == 0:
-                vc[i, j - 1].y = vc[i, j + 1].y
+                vc[i, j + 1] = -vc[i, j - 2]  # for kk scheme
+            elif bc_mask[i, j + 1] == 0 and bc_mask[i - 1, j] == 1 and bc_mask[i + 1, j] == 1:
+                vc[i, j] = -vc[i, j + 1]
                 pc[i, j] = pc[i, j + 1]
+                vc[i, j - 1] = -vc[i, j + 2]  # for kk scheme
+            elif bc_mask[i - 1, j] == 0 and bc_mask[i, j + 1] == 0:
+                vc[i, j] = -(vc[i - 1, j] + vc[i, j + 1]) / 2.0
+                pc[i, j] = (pc[i - 1, j] + pc[i, j + 1]) / 2.0
+            elif bc_mask[i + 1, j] == 0 and bc_mask[i, j + 1] == 0:
+                vc[i, j] = -(vc[i + 1, j] + vc[i, j + 1]) / 2.0
+                pc[i, j] = (pc[i + 1, j] + pc[i, j + 1]) / 2.0
+            elif bc_mask[i - 1, j] == 0 and bc_mask[i, j - 1] == 0:
+                vc[i, j] = -(vc[i - 1, j] + vc[i, j - 1]) / 2.0
+                pc[i, j] = (pc[i - 1, j] + pc[i, j - 1]) / 2.0
+            elif bc_mask[i + 1, j] == 0 and bc_mask[i, j - 1] == 0:
+                vc[i, j] = -(vc[i + 1, j] + vc[i, j - 1]) / 2.0
+                pc[i, j] = (pc[i + 1, j] + pc[i, j - 1]) / 2.0
 
     @staticmethod
     def _to_field(bc, bc_mask):
