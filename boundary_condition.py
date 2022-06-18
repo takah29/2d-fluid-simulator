@@ -50,21 +50,21 @@ class BoundaryCondition:
         """
         if bc_mask[i, j] == 1:
             if bc_mask[i - 1, j] == 0 and bc_mask[i, j - 1] == 1 and bc_mask[i, j + 1] == 1:
-                vc[i, j] = -vc[i - 1, j]
+                vc[i, j] = [0.0, 0.0]
                 pc[i, j] = pc[i - 1, j]
-                vc[i + 1, j] = -vc[i - 2, j]  # for kk scheme
+                vc[i + 1, j] = -vc[i - 1, j]  # for kk scheme
             elif bc_mask[i + 1, j] == 0 and bc_mask[i, j - 1] == 1 and bc_mask[i, j + 1] == 1:
-                vc[i, j] = -vc[i + 1, j]
+                vc[i, j] = [0.0, 0.0]
                 pc[i, j] = pc[i + 1, j]
-                vc[i - 1, j] = -vc[i + 2, j]  # for kk scheme
+                vc[i - 1, j] = -vc[i + 1, j]  # for kk scheme
             elif bc_mask[i, j - 1] == 0 and bc_mask[i - 1, j] == 1 and bc_mask[i + 1, j] == 1:
-                vc[i, j] = -vc[i, j - 1]
+                vc[i, j] = [0.0, 0.0]
                 pc[i, j] = pc[i, j - 1]
-                vc[i, j + 1] = -vc[i, j - 2]  # for kk scheme
+                vc[i, j + 1] = -vc[i, j - 1]  # for kk scheme
             elif bc_mask[i, j + 1] == 0 and bc_mask[i - 1, j] == 1 and bc_mask[i + 1, j] == 1:
-                vc[i, j] = -vc[i, j + 1]
+                vc[i, j] = [0.0, 0.0]
                 pc[i, j] = pc[i, j + 1]
-                vc[i, j - 1] = -vc[i, j + 2]  # for kk scheme
+                vc[i, j - 1] = -vc[i, j + 1]  # for kk scheme
             elif bc_mask[i - 1, j] == 0 and bc_mask[i, j + 1] == 0:
                 vc[i, j] = -(vc[i - 1, j] + vc[i, j + 1]) / 2.0
                 pc[i, j] = (pc[i - 1, j] + pc[i, j + 1]) / 2.0
@@ -179,7 +179,7 @@ def create_boundary_condition1(resolution, no_dye=False):
         # 円柱の設定
         r = y_res // 18
         c = (x_res // 4, y_res // 2)
-        BoundaryCondition.set_circle(bc, bc_mask, c, r)
+        BoundaryCondition.set_circle(bc, bc_mask, bc_dye, c, r)
 
     set_inflow()
     set_outflow()
