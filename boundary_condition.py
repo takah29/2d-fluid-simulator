@@ -5,7 +5,7 @@ import taichi as ti
 @ti.data_oriented
 class BoundaryCondition:
     def __init__(self, bc_const, bc_mask):
-        self._bc_const, self._bc_mask = BoundaryCondition._to_field(bc_const, bc_mask)
+        self._bc_const, self._bc_mask = BoundaryCondition.to_field(bc_const, bc_mask)
 
     @ti.kernel
     def set_boundary_condition(self, vc: ti.template(), pc: ti.template()):
@@ -36,6 +36,7 @@ class BoundaryCondition:
 
     @ti.func
     def _set_outflow_bc(self, vc, pc, bc_mask, i, j):
+        # 右側のみ
         if bc_mask[i, j] == 3:
             vc[i, j].x = min(max(vc[i - 1, j].x, 0.0), 10.0)  # 逆流しないようにする
             vc[i, j].y = min(max(vc[i - 1, j].y, -10.0), 10.0)
@@ -78,7 +79,7 @@ class BoundaryCondition:
                 pc[i, j] = (pc[i + 1, j] + pc[i, j - 1]) / 2.0
 
     @staticmethod
-    def _to_field(bc, bc_mask):
+    def to_field(bc, bc_mask):
         bc_field = ti.Vector.field(2, ti.f32, shape=bc.shape[:2])
         bc_field.from_numpy(bc)
         bc_mask_field = ti.field(ti.u8, shape=bc_mask.shape[:2])
@@ -87,22 +88,22 @@ class BoundaryCondition:
         return bc_field, bc_mask_field
 
     @staticmethod
-    def _set_circle(bc, bc_mask, i, j, radius):
-        p = np.array([i, j])
-        l_ = np.round(np.maximum(p - radius, 0)).astype(np.int32)
-        u0 = round(min(p[0] + radius, bc.shape[0]))
-        u1 = round(min(p[1] + radius, bc.shape[1]))
+    def set_circle(bc, bc_mask, center, radius):
+        center = np.asarray(center)
+        l_ = np.round(np.maximum(center - radius, 0)).astype(np.int32)
+        u0 = round(min(center[0] + radius, bc.shape[0]))
+        u1 = round(min(center[1] + radius, bc.shape[1]))
         for i in range(l_[0], u0):
             for j in range(l_[1], u1):
                 x = np.array([i, j]) + 0.5
-                if np.linalg.norm(x - p) < radius:
+                if np.linalg.norm(x - center) < radius:
                     bc[i, j] = np.array([0.0, 0.0])
                     bc_mask[i, j] = 1
 
 
 class DyeBoundaryCondition(BoundaryCondition):
     def __init__(self, bc_const, bc_dye, bc_mask):
-        self._bc_const, self._bc_dye, self._bc_mask = DyeBoundaryCondition._to_field(
+        self._bc_const, self._bc_dye, self._bc_mask = DyeBoundaryCondition.to_field(
             bc_const, bc_dye, bc_mask
         )
 
@@ -118,7 +119,7 @@ class DyeBoundaryCondition(BoundaryCondition):
                 self._set_inside_wall_bc(vc, pc, bc_mask, i, j)
 
     @staticmethod
-    def _to_field(bc, bc_dye, bc_mask):
+    def to_field(bc, bc_dye, bc_mask):
         bc_field = ti.Vector.field(2, ti.f32, shape=bc.shape[:2])
         bc_field.from_numpy(bc)
         bc_dye_field = ti.Vector.field(3, ti.f32, shape=bc_dye.shape[:2])
@@ -160,7 +161,8 @@ def create_boundary_condition1(resolution, no_dye=False):
 
     # 円柱の設定
     r = resolution // 18
-    BoundaryCondition._set_circle(bc, bc_mask, resolution // 2 - r, resolution // 2, r)
+    c = (resolution // 2 - r, resolution // 2)
+    BoundaryCondition.set_circle(bc, bc_mask, c, r)
 
     if no_dye:
         boundary_condition = BoundaryCondition(bc, bc_mask)
@@ -258,7 +260,7 @@ def create_boundary_condition3(resolution, no_dye=False):
     points = points[points[:, 1] < resolution]
     r = 16 * (resolution / ref_resolution)
     for p in points:
-        BoundaryCondition._set_circle(bc, bc_mask, p[0], p[1], r)
+        BoundaryCondition.set_circle(bc, bc_mask, p, r)
 
     if no_dye:
         boundary_condition = BoundaryCondition(bc, bc_mask)
