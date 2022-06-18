@@ -88,7 +88,7 @@ class BoundaryCondition:
         return bc_field, bc_mask_field
 
     @staticmethod
-    def set_circle(bc, bc_mask, center, radius):
+    def set_circle(bc, bc_mask, bc_dye, center, radius):
         center = np.asarray(center)
         l_ = np.round(np.maximum(center - radius, 0)).astype(np.int32)
         u0 = round(min(center[0] + radius, bc.shape[0]))
@@ -99,11 +99,15 @@ class BoundaryCondition:
                 if np.linalg.norm(x - center) < radius:
                     bc[i, j] = np.array([0.0, 0.0])
                     bc_mask[i, j] = 1
+                    bc_dye[i, j] = np.array([0.0, 0.0, 0.0])
 
     @staticmethod
-    def set_plane(bc, bc_mask, lower_left, upper_right):
+    def set_plane(bc, bc_mask, bc_dye, lower_left, upper_right):
         bc[lower_left[0] : upper_right[0], lower_left[1] : upper_right[1]] = np.array([0.0, 0.0])
         bc_mask[lower_left[0] : upper_right[0], lower_left[1] : upper_right[1]] = 1
+        bc_dye[lower_left[0] : upper_right[0], lower_left[1] : upper_right[1]] = np.array(
+            [0.0, 0.0, 0.0]
+        )
 
 
 class DyeBoundaryCondition(BoundaryCondition):
@@ -169,8 +173,8 @@ def create_boundary_condition1(resolution, no_dye=False):
 
     # 壁の設定
     def set_wall():
-        BoundaryCondition.set_plane(bc, bc_mask, (0, 0), (x_res, 2))  # 下
-        BoundaryCondition.set_plane(bc, bc_mask, (0, y_res - 2), (x_res, y_res))  # 上
+        BoundaryCondition.set_plane(bc, bc_mask, bc_dye, (0, 0), (x_res, 2))  # 下
+        BoundaryCondition.set_plane(bc, bc_mask, bc_dye, (0, y_res - 2), (x_res, y_res))  # 上
 
         # 円柱の設定
         r = y_res // 18
@@ -205,28 +209,28 @@ def create_boundary_condition2(resolution, no_dye=False):
 
     # 壁の設定
     def set_wall():
-        BoundaryCondition.set_plane(bc, bc_mask, (0, 0), (2, y_res // 3))  # 左下
-        BoundaryCondition.set_plane(bc, bc_mask, (0, 2 * y_res // 3), (2, y_res))  # 左上
-        BoundaryCondition.set_plane(bc, bc_mask, (x_res - 2, 0), (x_res, y_res))  # 右
-        BoundaryCondition.set_plane(bc, bc_mask, (0, 0), (x_res, 2))  # 下
-        BoundaryCondition.set_plane(bc, bc_mask, (0, y_res - 2), (x_res, y_res))  # 上
+        BoundaryCondition.set_plane(bc, bc_mask, bc_dye, (0, 0), (2, y_res // 3))  # 左下
+        BoundaryCondition.set_plane(bc, bc_mask, bc_dye, (0, 2 * y_res // 3), (2, y_res))  # 左上
+        BoundaryCondition.set_plane(bc, bc_mask, bc_dye, (x_res - 2, 0), (x_res, y_res))  # 右
+        BoundaryCondition.set_plane(bc, bc_mask, bc_dye, (0, 0), (x_res, 2))  # 下
+        BoundaryCondition.set_plane(bc, bc_mask, bc_dye, (0, y_res - 2), (x_res, y_res))  # 上
 
         x_point = x_res // 5
         y_point = y_res // 2
         size = y_res // 32  # 壁幅
         # 左
-        BoundaryCondition.set_plane(bc, bc_mask, (x_point - size, y_point), (x_point + size, y_res))
+        BoundaryCondition.set_plane(bc, bc_mask, bc_dye, (x_point - size, y_point), (x_point + size, y_res))
         # 真ん中左
         BoundaryCondition.set_plane(
-            bc, bc_mask, (2 * x_point - size, 0), (2 * x_point + size, y_point)
+            bc, bc_mask, bc_dye, (2 * x_point - size, 0), (2 * x_point + size, y_point)
         )
         # 真ん中右
         BoundaryCondition.set_plane(
-            bc, bc_mask, (3 * x_point - size, y_point), (3 * x_point + size, y_res)
+            bc, bc_mask, bc_dye, (3 * x_point - size, y_point), (3 * x_point + size, y_res)
         )
         # 右
         BoundaryCondition.set_plane(
-            bc, bc_mask, (4 * x_point - size, 0), (4 * x_point + size, y_point)
+            bc, bc_mask, bc_dye, (4 * x_point - size, 0), (4 * x_point + size, y_point)
         )
 
     # 流出部の設定
@@ -268,8 +272,8 @@ def create_boundary_condition3(resolution, no_dye=False):
 
     # 壁の設定
     def set_wall():
-        BoundaryCondition.set_plane(bc, bc_mask, (0, 0), (x_res, 2))  # 下
-        BoundaryCondition.set_plane(bc, bc_mask, (0, y_res - 2), (x_res, y_res))  # 上
+        BoundaryCondition.set_plane(bc, bc_mask, bc_dye, (0, 0), (x_res, 2))  # 下
+        BoundaryCondition.set_plane(bc, bc_mask, bc_dye, (0, y_res - 2), (x_res, y_res))  # 上
 
         # 円柱ランダム生成
         ref_resolution = 500
@@ -278,7 +282,7 @@ def create_boundary_condition3(resolution, no_dye=False):
         points = points[points[:, 1] < y_res]
         r = 16 * (y_res / ref_resolution)
         for p in points:
-            BoundaryCondition.set_circle(bc, bc_mask, p, r)
+            BoundaryCondition.set_circle(bc, bc_mask, bc_dye, p, r)
 
     set_inflow()
     set_outflow()
@@ -299,10 +303,10 @@ def create_boundary_condition4(resolution, no_dye=False):
 
     # 壁の設定
     def set_wall():
-        BoundaryCondition.set_plane(bc, bc_mask, (0, 0), (2, y_res))  # 左
-        BoundaryCondition.set_plane(bc, bc_mask, (x_res - 2, 0), (x_res, y_res))  # 右
-        BoundaryCondition.set_plane(bc, bc_mask, (0, 0), (x_res, 2))  # 下
-        BoundaryCondition.set_plane(bc, bc_mask, (0, y_res - 2), (x_res, y_res))  # 上
+        BoundaryCondition.set_plane(bc, bc_mask, bc_dye, (0, 0), (2, y_res))  # 左
+        BoundaryCondition.set_plane(bc, bc_mask, bc_dye, (x_res - 2, 0), (x_res, y_res))  # 右
+        BoundaryCondition.set_plane(bc, bc_mask, bc_dye, (0, 0), (x_res, 2))  # 下
+        BoundaryCondition.set_plane(bc, bc_mask, bc_dye, (0, y_res - 2), (x_res, y_res))  # 上
 
     # 流入部の設定
     def set_inflow():
