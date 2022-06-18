@@ -1,7 +1,7 @@
 # 2D Fluid Simulator
 
-![baundary_condition_2_dye](./images/bc2_res1600_re100_cip_vc1_dye.jpg)
-![baundary_condition_2_norm](./images/bc2_res1600_re100_cip_vc1_norm.jpg)
+![baundary_condition_2_dye](./images/bc2_res1600_re100_cip_vc4_dye.jpg)
+![baundary_condition_2_norm](./images/bc2_res1600_re100_cip_vc4_norm.jpg)
 
 ## Features
 
@@ -64,13 +64,13 @@ GeForce GTX 1080 or higher recommended.
 ### Flow Visualization
 
 - Norm and Pressure
-  ![norm_and_pressure](./images/bc4_res800_re1000_cip_vc4_norm.jpg)
+  ![norm_and_pressure](./images/bc4_res800_re100_cip_vc4_norm.jpg)
 - Pressure
-  ![pressure](./images/bc4_res800_re1000_cip_vc4_pressure.jpg)
+  ![pressure](./images/bc4_res800_re100_cip_vc4_pressure.jpg)
 - Vorticity
-  ![vorticity](./images/bc4_res800_re1000_cip_vc4_vorticity.jpg)
+  ![vorticity](./images/bc4_res800_re100_cip_vc4_vorticity.jpg)
 - Dye
-  ![dye](./images/bc4_res800_re1000_cip_vc4_dye.jpg)
+  ![dye](./images/bc4_res800_re100_cip_vc4_dye.jpg)
 
 ### Vorticity Confinement
 
