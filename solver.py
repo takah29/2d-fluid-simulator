@@ -101,8 +101,8 @@ class MacSolver(Solver):
             self._add_vorticity(self.v.next, self.v.current, self.vor, self.vor_abs)
             self.v.swap()
 
-        self._bc.set_boundary_condition(self.v.current, self.p.current)
         for _ in range(self.p_iter):
+            self._bc.set_boundary_condition(self.v.current, self.p.current)
             self._update_pressures(self.p.next, self.p.current, self.v.current)
             self.p.swap()
 
@@ -138,8 +138,8 @@ class MacSolver(Solver):
                         + sample(pc, i, j - 1)
                     )
                     - (dx.x + dy.y) / self.dt
-                    + dx.x ** 2
-                    + dy.y ** 2
+                    + dx.x**2
+                    + dy.y**2
                     + 2 * dy.x * dx.y
                 ) * 0.25
 
@@ -163,8 +163,8 @@ class DyeMacSolver(MacSolver):
             self._add_vorticity(self.v.next, self.v.current, self.vor, self.vor_abs)
             self.v.swap()
 
-        self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
         for _ in range(self.p_iter):
+            self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
             self._update_pressures(self.p.next, self.p.current, self.v.current)
             self.p.swap()
 
@@ -224,8 +224,8 @@ class CipMacSolver(Solver):
             self._add_vorticity(self.v.next, self.v.current, self.vor, self.vor_abs)
             self.v.swap()
 
-        self._bc.set_boundary_condition(self.v.current, self.p.current)
         for _ in range(self.p_iter):
+            self._bc.set_boundary_condition(self.v.current, self.p.current)
             self._update_pressures(self.p.next, self.p.current, self.v.current)
             self.p.swap()
 
@@ -266,15 +266,12 @@ class CipMacSolver(Solver):
         """中間量の計算"""
         for i, j in fn:
             if not self._bc.is_wall(i, j):
-                G = (
-                    -ti.Vector(
-                        [
-                            diff_x(pc, i, j),
-                            diff_y(pc, i, j),
-                        ]
-                    )
-                    + self._calc_diffusion(fc, i, j)
-                )
+                G = -ti.Vector(
+                    [
+                        diff_x(pc, i, j),
+                        diff_y(pc, i, j),
+                    ]
+                ) + self._calc_diffusion(fc, i, j)
                 fn[i, j] = fc[i, j] + G * self.dt
 
     @ti.kernel
@@ -369,8 +366,8 @@ class CipMacSolver(Solver):
                         + sample(pc, i, j - 1)
                     )
                     - (dx.x + dy.y) / self.dt
-                    + dx.x ** 2
-                    + dy.y ** 2
+                    + dx.x**2
+                    + dy.y**2
                     + 2 * dy.x * dx.y
                 ) * 0.25
 
@@ -415,8 +412,8 @@ class DyeCipMacSolver(CipMacSolver):
             self._add_vorticity(self.v.next, self.v.current, self.vor, self.vor_abs)
             self.v.swap()
 
-        self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
         for _ in range(self.p_iter):
+            self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
             self._update_pressures(self.p.next, self.p.current, self.v.current)
             self.p.swap()
 
