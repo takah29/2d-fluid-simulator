@@ -331,3 +331,63 @@ def create_boundary_condition4(resolution, no_dye=False):
         boundary_condition = DyeBoundaryCondition(bc, bc_dye, bc_mask)
 
     return boundary_condition
+
+
+def create_boundary_condition5(resolution, no_dye=False):
+    # 1: 壁, 2: 流入部, 3: 流出部
+    x_res, y_res = 2 * resolution, resolution
+    bc, bc_mask, bc_dye = create_bc_array(x_res, y_res)
+
+    # 流出部の設定
+    def set_outflow():
+        bc[-2:, :] = np.array([15.0, 0.0])
+        bc_mask[-2:, :] = 3
+
+    # 流入部の設定
+    def set_inflow():
+        #
+        bc[:2, 2 : y_res // 3] = np.array([20.0, 0.0])
+        bc_mask[:2, 2 : y_res // 3] = 2
+        bc_dye[:2, 2 : y_res // 3] = np.array([1.2, 0.2, 0.2])
+
+        bc[:2, 2 * y_res // 3 : y_res - 2] = np.array([20.0, 0.0])
+        bc_mask[:2, 2 * y_res // 3 : y_res - 2] = 2
+        bc_dye[:2, 2 * y_res // 3 : y_res - 2] = np.array([0.2, 1.2, 1.2])
+
+    # 壁の設定
+    def set_wall():
+        BoundaryCondition.set_plane(bc, bc_mask, bc_dye, (0, 0), (x_res, 2))  # 下
+        BoundaryCondition.set_plane(bc, bc_mask, bc_dye, (0, y_res - 2), (x_res, y_res))  # 上
+
+        size = x_res // 64
+        BoundaryCondition.set_plane(
+            bc, bc_mask, bc_dye, (0, y_res // 5), (11 * x_res // 30, 4 * y_res // 5)
+        )  # 左真中
+        BoundaryCondition.set_plane(
+            bc, bc_mask, bc_dye, (x_res // 2 - size, 0), (x_res // 2 + size, 2 * y_res // 5)
+        )  # 下真中
+        BoundaryCondition.set_plane(
+            bc, bc_mask, bc_dye, (x_res // 2 - size, 3 * y_res // 5), (x_res // 2 + size, y_res)
+        )  # 上真中
+
+        # 障害物
+        y_point = y_res // 6
+        v = np.array([y_res, y_res]) // 25
+        params = [(7, 8, 9, 10, 11), (0, 1, 0, 1, 0)]
+        for a, b in zip(*params):
+            for i in range(1, 6 + b):
+                p = np.array([a * x_res // 12, i * y_point - b * y_res // 12])
+                lower_left = p - v
+                upper_right = p + v
+                BoundaryCondition.set_plane(bc, bc_mask, bc_dye, lower_left, upper_right)
+
+    set_outflow()
+    set_inflow()
+    set_wall()
+
+    if no_dye:
+        boundary_condition = BoundaryCondition(bc, bc_mask)
+    else:
+        boundary_condition = DyeBoundaryCondition(bc, bc_dye, bc_mask)
+
+    return boundary_condition
