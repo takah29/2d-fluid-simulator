@@ -147,25 +147,32 @@ def create_boundary_condition1(resolution, no_dye=False):
     bc_dye = np.zeros((2 * resolution, resolution, 3), dtype=np.float32)
 
     # 流入部の設定
-    bc[:2, :] = np.array([20.0, 0.0])
-    bc_dye[:2, :] = np.array([0.2, 0.2, 1.2])
-    width = resolution // 10
-    for i in range(0, resolution, width):
-        bc_dye[:2, i : i + width // 2] = np.array([1.2, 1.2, 0.2])
-    bc_mask[:2, :] = 2
+    def set_inflow():
+        bc[:2, :] = np.array([20.0, 0.0])
+        bc_dye[:2, :] = np.array([0.2, 0.2, 1.2])
+        width = resolution // 10
+        for i in range(0, resolution, width):
+            bc_dye[:2, i : i + width // 2] = np.array([1.2, 1.2, 0.2])
+        bc_mask[:2, :] = 2
 
     # 流出部の設定
-    bc[-1, :] = np.array([20.0, 0.0])
-    bc_mask[-1, :] = 3
+    def set_outflow():
+        bc[-1, :] = np.array([20.0, 0.0])
+        bc_mask[-1, :] = 3
 
     # 壁の設定
-    BoundaryCondition.set_plane(bc, bc_mask, (0, 0), (2 * resolution, 2))
-    BoundaryCondition.set_plane(bc, bc_mask, (0, resolution - 2), (2 * resolution, resolution))
+    def set_wall():
+        BoundaryCondition.set_plane(bc, bc_mask, (0, 0), (2 * resolution, 2))
+        BoundaryCondition.set_plane(bc, bc_mask, (0, resolution - 2), (2 * resolution, resolution))
 
-    # 円柱の設定
-    r = resolution // 18
-    c = (resolution // 2 - r, resolution // 2)
-    BoundaryCondition.set_circle(bc, bc_mask, c, r)
+        # 円柱の設定
+        r = resolution // 18
+        c = (resolution // 2 - r, resolution // 2)
+        BoundaryCondition.set_circle(bc, bc_mask, c, r)
+
+    set_inflow()
+    set_outflow()
+    set_wall()
 
     if no_dye:
         boundary_condition = BoundaryCondition(bc, bc_mask)
@@ -181,41 +188,53 @@ def create_boundary_condition2(resolution, no_dye=False):
     bc_dye = np.zeros((2 * resolution, resolution, 3), dtype=np.float32)
 
     # 流入部の設定
-    y_point = resolution // 6
-    bc[:2, :] = np.array([20.0, 0.0])
-    bc_mask[:2, :] = 2
-    bc_dye[:2, :] = np.array([0.2, 0.2, 1.2])
-    width = resolution // 10
-    for i in range(0, resolution, width):
-        bc_dye[:2, i : i + width // 2] = np.array([1.2, 1.2, 0.2])
+    def set_inflow():
+        bc[:2, :] = np.array([20.0, 0.0])
+        bc_mask[:2, :] = 2
+        bc_dye[:2, :] = np.array([0.2, 0.2, 1.2])
+        width = resolution // 10
+        for i in range(0, resolution, width):
+            bc_dye[:2, i : i + width // 2] = np.array([1.2, 1.2, 0.2])
 
     # 壁の設定
-    BoundaryCondition.set_plane(bc, bc_mask, (0, 0), (2, resolution // 3))
-    BoundaryCondition.set_plane(bc, bc_mask, (0, 2 * resolution // 3), (2, resolution))
-    BoundaryCondition.set_plane(bc, bc_mask, (2 * resolution - 2, 0), (2 * resolution, resolution))
-    BoundaryCondition.set_plane(bc, bc_mask, (0, 0), (2 * resolution, 2))
-    BoundaryCondition.set_plane(bc, bc_mask, (0, resolution - 2), (2 * resolution, resolution))
+    def set_wall():
+        BoundaryCondition.set_plane(bc, bc_mask, (0, 0), (2, resolution // 3))
+        BoundaryCondition.set_plane(bc, bc_mask, (0, 2 * resolution // 3), (2, resolution))
+        BoundaryCondition.set_plane(
+            bc, bc_mask, (2 * resolution - 2, 0), (2 * resolution, resolution)
+        )
+        BoundaryCondition.set_plane(bc, bc_mask, (0, 0), (2 * resolution, 2))
+        BoundaryCondition.set_plane(bc, bc_mask, (0, resolution - 2), (2 * resolution, resolution))
 
-    x_point = 2 * resolution // 5
-    y_point = resolution // 2
-    size = resolution // 32  # 壁幅
-    # 左
-    BoundaryCondition.set_plane(
-        bc, bc_mask, (x_point - size, y_point), (x_point + size, resolution)
-    )
-    # 真ん中左
-    BoundaryCondition.set_plane(bc, bc_mask, (2 * x_point - size, 0), (2 * x_point + size, y_point))
-    # 真ん中右
-    BoundaryCondition.set_plane(
-        bc, bc_mask, (3 * x_point - size, y_point), (3 * x_point + size, resolution)
-    )
-    # 右
-    BoundaryCondition.set_plane(bc, bc_mask, (4 * x_point - size, 0), (4 * x_point + size, y_point))
+        x_point = 2 * resolution // 5
+        y_point = resolution // 2
+        size = resolution // 32  # 壁幅
+        # 左
+        BoundaryCondition.set_plane(
+            bc, bc_mask, (x_point - size, y_point), (x_point + size, resolution)
+        )
+        # 真ん中左
+        BoundaryCondition.set_plane(
+            bc, bc_mask, (2 * x_point - size, 0), (2 * x_point + size, y_point)
+        )
+        # 真ん中右
+        BoundaryCondition.set_plane(
+            bc, bc_mask, (3 * x_point - size, y_point), (3 * x_point + size, resolution)
+        )
+        # 右
+        BoundaryCondition.set_plane(
+            bc, bc_mask, (4 * x_point - size, 0), (4 * x_point + size, y_point)
+        )
 
     # 流出部の設定
-    y_point = resolution // 6
-    bc[-2:, 2 * y_point : 4 * y_point] = np.array([15.0, 0.0])
-    bc_mask[-2:, 2 * y_point : 4 * y_point] = 3
+    def set_outflow():
+        y_point = resolution // 6
+        bc[-2:, 2 * y_point : 4 * y_point] = np.array([15.0, 0.0])
+        bc_mask[-2:, 2 * y_point : 4 * y_point] = 3
+
+    set_inflow()
+    set_wall()
+    set_outflow()
 
     if no_dye:
         boundary_condition = BoundaryCondition(bc, bc_mask)
@@ -231,29 +250,36 @@ def create_boundary_condition3(resolution, no_dye=False):
     bc_dye = np.zeros((2 * resolution, resolution, 3), dtype=np.float32)
 
     # 流入部の設定
-    bc[:2, :] = np.array([20.0, 0.0])
-    bc_dye[:2, :] = np.array([0.2, 0.2, 1.2])
-    width = resolution // 10
-    for i in range(0, resolution, width):
-        bc_dye[:2, i : i + width // 2] = np.array([1.2, 1.2, 0.2])
-    bc_mask[:2, :] = 2
+    def set_inflow():
+        bc[:2, :] = np.array([20.0, 0.0])
+        bc_dye[:2, :] = np.array([0.2, 0.2, 1.2])
+        width = resolution // 10
+        for i in range(0, resolution, width):
+            bc_dye[:2, i : i + width // 2] = np.array([1.2, 1.2, 0.2])
+        bc_mask[:2, :] = 2
 
     # 流出部の設定
-    bc[-1, :] = np.array([15.0, 0.0])
-    bc_mask[-1, :] = 3
+    def set_outflow():
+        bc[-1, :] = np.array([15.0, 0.0])
+        bc_mask[-1, :] = 3
 
     # 壁の設定
-    BoundaryCondition.set_plane(bc, bc_mask, (0, 0), (2 * resolution, 2))
-    BoundaryCondition.set_plane(bc, bc_mask, (0, resolution - 2), (2 * resolution, resolution))
+    def set_wall():
+        BoundaryCondition.set_plane(bc, bc_mask, (0, 0), (2 * resolution, 2))
+        BoundaryCondition.set_plane(bc, bc_mask, (0, resolution - 2), (2 * resolution, resolution))
 
-    # 円柱ランダム生成
-    ref_resolution = 500
-    np.random.seed(123)
-    points = np.random.uniform(0, 2 * resolution, (100, 2))
-    points = points[points[:, 1] < resolution]
-    r = 16 * (resolution / ref_resolution)
-    for p in points:
-        BoundaryCondition.set_circle(bc, bc_mask, p, r)
+        # 円柱ランダム生成
+        ref_resolution = 500
+        np.random.seed(123)
+        points = np.random.uniform(0, 2 * resolution, (100, 2))
+        points = points[points[:, 1] < resolution]
+        r = 16 * (resolution / ref_resolution)
+        for p in points:
+            BoundaryCondition.set_circle(bc, bc_mask, p, r)
+
+    set_inflow()
+    set_outflow()
+    set_wall()
 
     if no_dye:
         boundary_condition = BoundaryCondition(bc, bc_mask)
@@ -269,21 +295,30 @@ def create_boundary_condition4(resolution, no_dye=False):
     bc_dye = np.zeros((2 * resolution, resolution, 3), dtype=np.float32)
 
     # 壁の設定
-    BoundaryCondition.set_plane(bc, bc_mask, (0, 0), (2, resolution))
-    BoundaryCondition.set_plane(bc, bc_mask, (2 * resolution - 2, 0), (2 * resolution, resolution))
-    BoundaryCondition.set_plane(bc, bc_mask, (0, 0), (2 * resolution, 2))
-    BoundaryCondition.set_plane(bc, bc_mask, (0, resolution - 2), (2 * resolution, resolution))
+    def set_wall():
+        BoundaryCondition.set_plane(bc, bc_mask, (0, 0), (2, resolution))
+        BoundaryCondition.set_plane(
+            bc, bc_mask, (2 * resolution - 2, 0), (2 * resolution, resolution)
+        )
+        BoundaryCondition.set_plane(bc, bc_mask, (0, 0), (2 * resolution, 2))
+        BoundaryCondition.set_plane(bc, bc_mask, (0, resolution - 2), (2 * resolution, resolution))
 
-    # 流入部（下）の設定
-    size = resolution // 5
-    bc[size : 2 * size, :2] = np.array([8.0, 16.0])
-    bc_dye[size : 2 * size, :2] = np.array([1.2, 1.2, 0.2])
-    bc_mask[size : 2 * size, :2] = 2
+    # 流入部の設定
+    def set_inflow():
+        size = resolution // 5
 
-    # 流入部（上）の設定
-    bc[-2 * size : -size, -2:] = np.array([-8.0, -16.0])
-    bc_dye[-2 * size : -size, -2:] = np.array([0.2, 0.2, 1.2])
-    bc_mask[-2 * size : -size, -2:] = 2
+        # 下
+        bc[size : 2 * size, :2] = np.array([8.0, 16.0])
+        bc_dye[size : 2 * size, :2] = np.array([1.2, 1.2, 0.2])
+        bc_mask[size : 2 * size, :2] = 2
+
+        # 上
+        bc[-2 * size : -size, -2:] = np.array([-8.0, -16.0])
+        bc_dye[-2 * size : -size, -2:] = np.array([0.2, 0.2, 1.2])
+        bc_mask[-2 * size : -size, -2:] = 2
+
+    set_wall()
+    set_inflow()
 
     if no_dye:
         boundary_condition = BoundaryCondition(bc, bc_mask)
