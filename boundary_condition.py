@@ -177,7 +177,7 @@ def create_boundary_condition2(resolution, no_dye=False):
 
     # 流入部の設定
     y_point = resolution // 6
-    bc[:2, :] = np.array([15.0, 0.0])
+    bc[:2, :] = np.array([20.0, 0.0])
     bc_mask[:2, :] = 2
     bc_dye[:2, :] = np.array([0.2, 0.2, 1.2])
     width = resolution // 10
@@ -234,7 +234,7 @@ def create_boundary_condition3(resolution, no_dye=False):
     bc_dye = np.zeros((2 * resolution, resolution, 3), dtype=np.float32)
 
     # 流入部の設定
-    bc[:2, :] = np.array([15.0, 0.0])
+    bc[:2, :] = np.array([20.0, 0.0])
     bc_dye[:2, :] = np.array([0.2, 0.2, 1.2])
     width = resolution // 10
     for i in range(0, resolution, width):
