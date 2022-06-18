@@ -36,15 +36,15 @@ class FluidSimulator:
     @ti.kernel
     def _to_norm(self, rgb_buf: ti.template(), vc: ti.template(), pc: ti.template()):
         for i, j in rgb_buf:
-            rgb_buf[i, j] = 0.025 * visualize_norm(vc[i, j])
-            rgb_buf[i, j] += 0.0006 * visualize_pressure(pc[i, j])
+            rgb_buf[i, j] = 0.02 * visualize_norm(vc[i, j])
+            rgb_buf[i, j] += 0.00002 * visualize_pressure(pc[i, j])
             if self._solver.is_wall(i, j):
                 rgb_buf[i, j] = self._wall_color
 
     @ti.kernel
     def _to_pressure(self, rgb_buf: ti.template(), pc: ti.template()):
         for i, j in rgb_buf:
-            rgb_buf[i, j] = 0.004 * visualize_pressure(pc[i, j])
+            rgb_buf[i, j] = 0.0002 * visualize_pressure(pc[i, j])
             if self._solver.is_wall(i, j):
                 rgb_buf[i, j] = self._wall_color
 
