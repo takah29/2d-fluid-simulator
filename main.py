@@ -13,7 +13,7 @@ def main():
         "--boundary_condition",
         help="Boundary condition number",
         type=int,
-        choices=[1, 2, 3, 4],
+        choices=[1, 2, 3, 4, 5],
         default=1,
     )
     parser.add_argument("-re", "--reynolds_num", help="Reynolds number", type=float, default=10.0)
