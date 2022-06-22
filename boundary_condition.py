@@ -1,4 +1,5 @@
 from pathlib import Path
+
 import numpy as np
 import taichi as ti
 
@@ -51,32 +52,24 @@ class BoundaryCondition:
         """
         if bc_mask[i, j] == 1:
             if bc_mask[i - 1, j] == 0 and bc_mask[i, j - 1] == 1 and bc_mask[i, j + 1] == 1:
-                vc[i, j] = [0.0, 0.0]
                 pc[i, j] = pc[i - 1, j]
                 vc[i + 1, j] = -vc[i - 1, j]  # for kk scheme
             elif bc_mask[i + 1, j] == 0 and bc_mask[i, j - 1] == 1 and bc_mask[i, j + 1] == 1:
-                vc[i, j] = [0.0, 0.0]
                 pc[i, j] = pc[i + 1, j]
                 vc[i - 1, j] = -vc[i + 1, j]  # for kk scheme
             elif bc_mask[i, j - 1] == 0 and bc_mask[i - 1, j] == 1 and bc_mask[i + 1, j] == 1:
-                vc[i, j] = [0.0, 0.0]
                 pc[i, j] = pc[i, j - 1]
                 vc[i, j + 1] = -vc[i, j - 1]  # for kk scheme
             elif bc_mask[i, j + 1] == 0 and bc_mask[i - 1, j] == 1 and bc_mask[i + 1, j] == 1:
-                vc[i, j] = [0.0, 0.0]
                 pc[i, j] = pc[i, j + 1]
                 vc[i, j - 1] = -vc[i, j + 1]  # for kk scheme
             elif bc_mask[i - 1, j] == 0 and bc_mask[i, j + 1] == 0:
-                vc[i, j] = -(vc[i - 1, j] + vc[i, j + 1]) / 2.0
                 pc[i, j] = (pc[i - 1, j] + pc[i, j + 1]) / 2.0
             elif bc_mask[i + 1, j] == 0 and bc_mask[i, j + 1] == 0:
-                vc[i, j] = -(vc[i + 1, j] + vc[i, j + 1]) / 2.0
                 pc[i, j] = (pc[i + 1, j] + pc[i, j + 1]) / 2.0
             elif bc_mask[i - 1, j] == 0 and bc_mask[i, j - 1] == 0:
-                vc[i, j] = -(vc[i - 1, j] + vc[i, j - 1]) / 2.0
                 pc[i, j] = (pc[i - 1, j] + pc[i, j - 1]) / 2.0
             elif bc_mask[i + 1, j] == 0 and bc_mask[i, j - 1] == 0:
-                vc[i, j] = -(vc[i + 1, j] + vc[i, j - 1]) / 2.0
                 pc[i, j] = (pc[i + 1, j] + pc[i, j - 1]) / 2.0
 
     @staticmethod
