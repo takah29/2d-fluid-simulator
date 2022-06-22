@@ -7,6 +7,7 @@ from boundary_condition import (
     create_boundary_condition3,
     create_boundary_condition4,
     create_boundary_condition5,
+    create_boundary_condition6,    
 )
 from solver import CipMacSolver, DyeCipMacSolver, DyeMacSolver, MacSolver
 from visualization import visualize_norm, visualize_pressure, visualize_vorticity
@@ -23,6 +24,8 @@ def get_boundary_condition(num, resolution, no_dye):
         boundary_condition = create_boundary_condition4(resolution, no_dye)
     elif num == 5:
         boundary_condition = create_boundary_condition5(resolution, no_dye)
+    elif num == 6:
+        boundary_condition = create_boundary_condition6(resolution, no_dye)
     else:
         raise NotImplementedError
 

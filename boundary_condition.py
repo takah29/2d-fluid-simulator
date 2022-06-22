@@ -391,3 +391,51 @@ def create_boundary_condition5(resolution, no_dye=False):
         boundary_condition = DyeBoundaryCondition(bc, bc_dye, bc_mask)
 
     return boundary_condition
+
+
+def create_boundary_condition6(resolution, no_dye=False):
+    # 1: 壁, 2: 流入部, 3: 流出部
+    x_res, y_res = 2 * resolution, resolution
+    bc, bc_mask, bc_dye = create_bc_array(x_res, y_res)
+
+    # 流入部の設定
+    def set_inflow():
+        bc[:2, :] = np.array([20.0, 0.0])
+        bc_dye[:2, :] = np.array([0.2, 0.2, 1.2])
+        width = y_res // 10
+        for i in range(0, y_res, width):
+            bc_dye[:2, i : i + width // 2] = np.array([1.2, 1.2, 0.2])
+        bc_mask[:2, :] = 2
+
+    # 流出部の設定
+    def set_outflow():
+        bc[-1, :] = np.array([15.0, 0.0])
+        bc_mask[-1, :] = 3
+
+    # 壁の設定
+    def set_wall():
+        BoundaryCondition.set_plane(bc, bc_mask, bc_dye, (0, 0), (x_res, 2))  # 下
+        BoundaryCondition.set_plane(bc, bc_mask, bc_dye, (0, y_res - 2), (x_res, y_res))  # 上
+
+        from PIL import Image
+        image = Image.open('./images/bc_mask/dragon.png')
+        np_im = np.flip(np.flip(np.array(image)), axis = 1)
+        
+        for i in range(np_im.shape[0]):
+            for j in range(np_im.shape[1]):
+                if np_im[i,j,1] < 200:
+                    bc[j, i] = np.array([0.0, 0.0])
+                    bc_mask[j, i] = 1
+                    bc_dye[j, i] = np.array([0.0, 0.0, 0.0])
+        
+
+    set_inflow()
+    set_outflow()
+    set_wall()
+
+    if no_dye:
+        boundary_condition = BoundaryCondition(bc, bc_mask)
+    else:
+        boundary_condition = DyeBoundaryCondition(bc, bc_dye, bc_mask)
+        
+    return boundary_condition
