@@ -1,3 +1,4 @@
+from pathlib import Path
 import numpy as np
 import taichi as ti
 
@@ -449,7 +450,9 @@ def create_boundary_condition6(resolution, no_dye=False):
         BoundaryCondition.set_plane(bc, bc_mask, bc_dye, (0, 0), (x_res, 2))  # 下
         BoundaryCondition.set_plane(bc, bc_mask, bc_dye, (0, y_res - 2), (x_res, y_res))  # 上
 
-        set_obstacle_fromfile(bc, bc_mask, bc_dye, "./images/bc_mask/dragon.png")
+        basepath = Path(__file__).resolve().parent
+        filepath = basepath / "images/bc_mask/dragon.png"
+        set_obstacle_fromfile(bc, bc_mask, bc_dye, filepath)
 
     set_inflow()
     set_outflow()
