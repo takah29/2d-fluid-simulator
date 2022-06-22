@@ -152,6 +152,24 @@ def create_bc_array(x_resolution, y_resolution):
     return bc, bc_mask, bc_dye
 
 
+def set_obstacle_fromfile(bc, bc_mask, bc_dye, filepath):
+    """画像ファイルをもとに障害物を設定する
+
+    RGB値がBlackの領域を障害物として設定する
+    """
+    from PIL import Image
+
+    image = Image.open(filepath)
+    np_im = np.flip(np.flip(np.array(image)), axis=1)
+
+    for i in range(np_im.shape[0]):
+        for j in range(np_im.shape[1]):
+            if np_im[i, j, 1] < 200:
+                bc[j, i] = np.array([0.0, 0.0])
+                bc_mask[j, i] = 1
+                bc_dye[j, i] = np.array([0.0, 0.0, 0.0])
+
+
 def create_boundary_condition1(resolution, no_dye=False):
     # 1: 壁, 2: 流入部, 3: 流出部
     x_res, y_res = 2 * resolution, resolution
@@ -219,7 +237,9 @@ def create_boundary_condition2(resolution, no_dye=False):
         y_point = y_res // 2
         size = y_res // 32  # 壁幅
         # 左
-        BoundaryCondition.set_plane(bc, bc_mask, bc_dye, (x_point - size, y_point), (x_point + size, y_res))
+        BoundaryCondition.set_plane(
+            bc, bc_mask, bc_dye, (x_point - size, y_point), (x_point + size, y_res)
+        )
         # 真ん中左
         BoundaryCondition.set_plane(
             bc, bc_mask, bc_dye, (2 * x_point - size, 0), (2 * x_point + size, y_point)
@@ -417,17 +437,7 @@ def create_boundary_condition6(resolution, no_dye=False):
         BoundaryCondition.set_plane(bc, bc_mask, bc_dye, (0, 0), (x_res, 2))  # 下
         BoundaryCondition.set_plane(bc, bc_mask, bc_dye, (0, y_res - 2), (x_res, y_res))  # 上
 
-        from PIL import Image
-        image = Image.open('./images/bc_mask/dragon.png')
-        np_im = np.flip(np.flip(np.array(image)), axis = 1)
-        
-        for i in range(np_im.shape[0]):
-            for j in range(np_im.shape[1]):
-                if np_im[i,j,1] < 200:
-                    bc[j, i] = np.array([0.0, 0.0])
-                    bc_mask[j, i] = 1
-                    bc_dye[j, i] = np.array([0.0, 0.0, 0.0])
-        
+        set_obstacle_fromfile(bc, bc_mask, bc_dye, "./images/bc_mask/dragon.png")
 
     set_inflow()
     set_outflow()
@@ -437,5 +447,5 @@ def create_boundary_condition6(resolution, no_dye=False):
         boundary_condition = BoundaryCondition(bc, bc_mask)
     else:
         boundary_condition = DyeBoundaryCondition(bc, bc_dye, bc_mask)
-        
+
     return boundary_condition
