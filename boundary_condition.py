@@ -159,12 +159,24 @@ def set_obstacle_fromfile(bc, bc_mask, bc_dye, filepath):
     """
     from PIL import Image
 
-    image = Image.open(filepath)
+    image = Image.open(filepath).convert("L")
+    x_res, y_res = bc.shape[:2]
+
+    # アスペクト比を維持して画像サイズをy_resに合わせてリサイズする
+    x_ratio = x_res / image.width
+    y_ratio = y_res / image.height
+    resize_size = (
+        (x_res, round(image.height * x_ratio))
+        if x_ratio < y_ratio
+        else (round(image.width * y_ratio), y_res)
+    )
+    image = image.resize(resize_size)
+
     np_im = np.flip(np.flip(np.array(image)), axis=1)
 
     for i in range(np_im.shape[0]):
         for j in range(np_im.shape[1]):
-            if np_im[i, j, 1] < 200:
+            if np_im[i, j] < 200:
                 bc[j, i] = np.array([0.0, 0.0])
                 bc_mask[j, i] = 1
                 bc_dye[j, i] = np.array([0.0, 0.0, 0.0])
