@@ -172,14 +172,10 @@ def set_obstacle_fromfile(bc, bc_mask, bc_dye, filepath):
     )
     image = image.resize(resize_size)
 
-    np_im = np.flip(np.flip(np.array(image)), axis=1)
-
-    for i in range(np_im.shape[0]):
-        for j in range(np_im.shape[1]):
-            if np_im[i, j] < 200:
-                bc[j, i] = np.array([0.0, 0.0])
-                bc_mask[j, i] = 1
-                bc_dye[j, i] = np.array([0.0, 0.0, 0.0])
+    mask_indices = np.flip(np.array(image).T, axis=1) < 200
+    bc[mask_indices] = np.array([0.0, 0.0])
+    bc_mask[mask_indices] = 1
+    bc_dye[mask_indices] = np.array([0.0, 0.0, 0.0])
 
 
 def create_boundary_condition1(resolution, no_dye=False):
