@@ -47,6 +47,10 @@ GeForce GTX 1080 or higher recommended.
   ```bash
   python main.py -bc 5 -re 100
   ```
+- Boundary Condition 6, Reynolds Number = 100.0, dt = 0.01
+  ```bash
+  python main.py -bc 6 -re 100
+  ```
 - Help
   ```bash
   python main.py -h
