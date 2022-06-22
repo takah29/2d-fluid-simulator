@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 numpy = "*"
 taichi = "*"
+pillow = "*"
 
 [dev-packages]
 black = "*"
