@@ -172,7 +172,11 @@ def set_obstacle_fromfile(bc, bc_mask, bc_dye, filepath):
     )
     image = image.resize(resize_size)
 
-    mask_indices = np.flip(np.array(image).T, axis=1) < 200
+    # 領域の中央へ移動する
+    image_ = Image.new(image.mode, (x_res, y_res), 255)
+    image_.paste(image, ((x_res - image.width) // 2, 0))
+
+    mask_indices = np.flip(np.array(image_).T, axis=1) < 200
     bc[mask_indices] = np.array([0.0, 0.0])
     bc_mask[mask_indices] = 1
     bc_dye[mask_indices] = np.array([0.0, 0.0, 0.0])
