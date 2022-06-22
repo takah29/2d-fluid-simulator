@@ -156,7 +156,7 @@ def set_plane(bc, bc_mask, bc_dye, lower_left, upper_right):
 def set_obstacle_fromfile(bc, bc_mask, bc_dye, filepath):
     """画像ファイルをもとに障害物を設定する
 
-    RGB値がBlackの領域を障害物として設定する
+    黒の領域を障害物として設定する
     """
     from PIL import Image
 
