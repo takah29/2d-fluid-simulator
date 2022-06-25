@@ -429,11 +429,14 @@ def create_boundary_condition6(resolution, no_dye=False):
     # 流入部の設定
     def set_inflow():
         bc[:2, :] = np.array([20.0, 0.0])
-        bc_dye[:2, :] = np.array([0.2, 0.2, 1.2])
-        width = y_res // 10
-        for i in range(0, y_res, width):
-            bc_dye[:2, i : i + width // 2] = np.array([1.2, 1.2, 0.2])
         bc_mask[:2, :] = 2
+
+        y = np.array([1.1, 1.1, 0.2])
+        b = np.array([0.2, 0.2, 1.1])
+        r = np.array([1.1, 0.2, 0.2])
+        c = np.array([0.2, 1.1, 1.1])
+        color_map = create_color_map([c, r, b, y], bc_dye.shape[1])
+        bc_dye[:2, :] = np.stack((color_map, color_map), axis=0)
 
     # 流出部の設定
     def set_outflow():
