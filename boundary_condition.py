@@ -124,6 +124,18 @@ def create_bc_array(x_resolution, y_resolution):
     return bc, bc_mask, bc_dye
 
 
+def create_color_map(color_list, n_samples):
+    color_arr = np.vstack(color_list)
+    x = np.linspace(0.0, 1.0, color_arr.shape[0], endpoint=True)
+
+    x_ = np.linspace(0.0, 1.0, n_samples, endpoint=True)
+    r_arr = np.interp(x_, x, color_arr[:, 0])
+    g_arr = np.interp(x_, x, color_arr[:, 1])
+    b_arr = np.interp(x_, x, color_arr[:, 2])
+
+    return np.vstack((r_arr, g_arr, b_arr)).T
+
+
 def set_circle(bc, bc_mask, bc_dye, center, radius):
     center = np.asarray(center)
     l_ = np.round(np.maximum(center - radius, 0)).astype(np.int32)
