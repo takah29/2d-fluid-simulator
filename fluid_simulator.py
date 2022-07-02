@@ -93,13 +93,11 @@ class FluidSimulator:
 @ti.data_oriented
 class DyeFluidSimulator(FluidSimulator):
     def get_dye_field(self):
-        self._to_dye(self.rgb_buf, *self._solver.get_fields())
+        self._to_dye(self.rgb_buf, self._solver.get_fields()[2])
         return self.rgb_buf
 
     @ti.kernel
-    def _to_dye(
-        self, rgb_buf: ti.template(), v: ti.template(), p: ti.template(), dye: ti.template()
-    ):
+    def _to_dye(self, rgb_buf: ti.template(), dye: ti.template()):
         for i, j in rgb_buf:
             rgb_buf[i, j] = dye[i, j]
             if self._solver.is_wall(i, j):

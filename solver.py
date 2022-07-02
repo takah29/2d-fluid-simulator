@@ -230,7 +230,7 @@ class CipMacSolver(Solver):
             self.p.swap()
 
     def get_fields(self):
-        return self.v.current, self.p.current, self.vor_abs
+        return self.v.current, self.p.current
 
     @ti.kernel
     def _calc_grad_x(self, fx: ti.template(), f: ti.template()):
