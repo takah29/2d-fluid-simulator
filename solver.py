@@ -69,9 +69,6 @@ class MacSolver(Solver):
         self.v = DoubleBuffers(self._resolution, 2)  # velocity
         self.p = DoubleBuffers(self._resolution, 1)  # pressure
 
-        # initial condition
-        self.v.current.fill(ti.Vector([0.4, 0.0]))
-
     def update(self):
         self._bc.set_boundary_condition(self.v.current, self.p.current)
         self._update_velocities(self.v.next, self.v.current, self.p.current)
@@ -183,18 +180,7 @@ class CipMacSolver(Solver):
         self.vy = DoubleBuffers(self._resolution, 2)  # velocity gradient y
         self.p = DoubleBuffers(self._resolution, 1)  # pressure
 
-        # initial condition
-        self._initialize()
-
-    def _initialize(self):
-        self.v.current.fill(ti.Vector([0.4, 0.0]))
-        self.vx.reset()
-        self.vy.reset()
-
-        self._bc.set_boundary_condition(self.v.current, self.p.current)
-
-        self._calc_grad_x(self.vx.current, self.v.current)
-        self._calc_grad_y(self.vy.current, self.v.current)
+        self._set_grad(self.vx.current, self.vy.current, self.v.current)
 
     def update(self):
         self._bc.set_boundary_condition(self.v.current, self.p.current)
@@ -215,13 +201,9 @@ class CipMacSolver(Solver):
         return self.v.current, self.p.current
 
     @ti.kernel
-    def _calc_grad_x(self, fx: ti.template(), f: ti.template()):
+    def _set_grad(self, fx: ti.template(), fy: ti.template(), f: ti.template()):
         for i, j in fx:
             fx[i, j] = diff_x(f, i, j)
-
-    @ti.kernel
-    def _calc_grad_y(self, fy: ti.template(), f: ti.template()):
-        for i, j in fy:
             fy[i, j] = diff_y(f, i, j)
 
     def _update_velocities(self, v, vx, vy, p):
@@ -365,22 +347,7 @@ class DyeCipMacSolver(CipMacSolver):
 
         super().__init__(boundary_condition, dt, Re, p_iter, vorticity_confinement)
 
-    def _initialize(self):
-        self.v.current.fill(ti.Vector([0.4, 0.0]))
-        self.vx.reset()
-        self.vy.reset()
-        self.dye.reset()
-        self.dyex.reset()
-        self.dyey.reset()
-
-        self.dye.current.copy_from(self._bc._bc_dye)
-        self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
-
-        self._calc_grad_x(self.vx.current, self.v.current)
-        self._calc_grad_y(self.vy.current, self.v.current)
-
-        self._calc_grad_x(self.dyex.current, self.dye.current)
-        self._calc_grad_y(self.dyey.current, self.dye.current)
+        self._set_grad(self.dyex.current, self.dyey.current, self.dye.current)
 
     def update(self):
         self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
