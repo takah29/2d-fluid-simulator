@@ -2,7 +2,6 @@ from abc import ABCMeta, abstractmethod
 
 import taichi as ti
 
-from advection import vorticity_vec
 from differentiation import diff2_x, diff2_y, diff_x, diff_y, sample, sign
 
 
