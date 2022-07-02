@@ -10,11 +10,11 @@ VELOCITY_LIMIT = 70.0
 class DoubleBuffers:
     def __init__(self, resolution, n_channel):
         if n_channel == 1:
-            self.current = ti.field(float, shape=resolution)
-            self.next = ti.field(float, shape=resolution)
+            self.current = ti.field(ti.f32, shape=resolution)
+            self.next = ti.field(ti.f32, shape=resolution)
         else:
-            self.current = ti.Vector.field(n_channel, float, shape=resolution)
-            self.next = ti.Vector.field(n_channel, float, shape=resolution)
+            self.current = ti.Vector.field(n_channel, ti.f32, shape=resolution)
+            self.next = ti.Vector.field(n_channel, ti.f32, shape=resolution)
 
     def swap(self):
         self.current, self.next = self.next, self.current
@@ -44,7 +44,7 @@ class Solver(metaclass=ABCMeta):
 
 
 @ti.kernel
-def limit_field(field: ti.template(), limit: float):
+def limit_field(field: ti.template(), limit: ti.f32):
     for i, j in field:
         norm = field[i, j].norm()
         if norm > limit:

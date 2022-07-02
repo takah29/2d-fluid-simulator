@@ -12,8 +12,8 @@ class VorticityConfinement:
 
         self._resolution = boundary_condition.get_resolution()
 
-        self.vorticity = ti.field(float, shape=self._resolution)
-        self.vorticity_abs = ti.field(float, shape=self._resolution)
+        self.vorticity = ti.field(ti.f32, shape=self._resolution)
+        self.vorticity_abs = ti.field(ti.f32, shape=self._resolution)
 
     @ti.kernel
     def _calc_vorticity(self, vc: ti.template()):

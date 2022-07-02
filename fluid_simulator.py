@@ -37,7 +37,7 @@ def get_boundary_condition(num, resolution, no_dye):
 class FluidSimulator:
     def __init__(self, solver):
         self._solver = solver
-        self.rgb_buf = ti.Vector.field(3, float, shape=solver._resolution)  # image buffer
+        self.rgb_buf = ti.Vector.field(3, ti.f32, shape=solver._resolution)  # image buffer
         self._wall_color = ti.Vector([0.5, 0.7, 0.5])
 
     def step(self):
