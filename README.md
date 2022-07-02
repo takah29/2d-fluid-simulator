@@ -26,9 +26,9 @@ GeForce GTX 1080 or higher recommended.
 
 ## Usage
 
-- Boundary Condition 1, Reynolds Number = 0.4, dt = 0.01
+- Boundary Condition 1, Reynolds Number = 0.2, dt = 0.01
   ```bash
-  python main.py -re 0.4
+  python main.py -re 1.0
   ```
   Press `V` key switches the flow visualization method.
 - Boundary Condition 2, Reynolds Number = 100.0, resolution = 800, dt = 0.01
