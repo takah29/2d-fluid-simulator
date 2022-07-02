@@ -66,13 +66,3 @@ def advect_kk_scheme(vc, phi, i, j):
     b = my @ v / 6
 
     return vc[i, j].x * a + vc[i, j].y * b
-
-
-@ti.func
-def vorticity_vec(vor, vor_abs, i, j):
-    vor_grad_v = ti.Vector([diff_x(vor_abs, i, j), diff_y(vor_abs, i, j)])
-    vor_grad_v = vor_grad_v / vor_grad_v.norm()
-    vor_vec = ti.Vector([vor_grad_v.y, -vor_grad_v.x]) * vor[i, j]
-
-    # 発散する可能性があるのでクランプする
-    return ti.max(ti.min(vor_vec, 0.1), -0.1)

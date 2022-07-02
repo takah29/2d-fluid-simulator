@@ -2,7 +2,6 @@ from abc import ABCMeta, abstractmethod
 
 import taichi as ti
 
-from advection import vorticity_vec
 from differentiation import diff2_x, diff2_y, diff_x, diff_y, sample, sign
 
 
@@ -25,14 +24,9 @@ class DoubleBuffers:
 
 @ti.data_oriented
 class Solver(metaclass=ABCMeta):
-    def __init__(self, boundary_condition, vor_epsilon=None):
+    def __init__(self, boundary_condition):
         self._bc = boundary_condition
         self._resolution = boundary_condition.get_resolution()
-
-        # for vorticity confinement
-        self.vor = ti.field(float, shape=self._resolution)  # vorticity
-        self.vor_abs = ti.field(float, shape=self._resolution)
-        self.vor_epsilon = vor_epsilon
 
     @abstractmethod
     def update(self):
@@ -51,41 +45,24 @@ class Solver(metaclass=ABCMeta):
         for i, j in field:
             field[i, j] = ti.max(ti.min(field[i, j], high), low)
 
-    @ti.kernel
-    def _calc_vorticity(self, vor: ti.template(), vor_abs: ti.template(), vc: ti.template()):
-        for i, j in vor:
-            if not self._bc.is_wall(i, j):
-                vor[i, j] = diff_x(vc, i, j).y - diff_y(vc, i, j).x
-                vor_abs[i, j] = ti.abs(vor[i, j])
-
-    @ti.kernel
-    def _add_vorticity(
-        self,
-        vn: ti.template(),
-        vc: ti.template(),
-        vor: ti.template(),
-        vor_abs: ti.template(),
-    ):
-        for i, j in vn:
-            if not self._bc.is_wall(i, j):
-                vn[i, j] = vc[i, j] + self.dt * vorticity_vec(vor, vor_abs, i, j) * self.vor_epsilon
-
 
 @ti.data_oriented
 class MacSolver(Solver):
     """Maker And Cell method"""
 
-    def __init__(self, boundary_condition, advect_function, dt, Re, p_iter, vor_epsilon=None):
-        super().__init__(boundary_condition, vor_epsilon)
+    def __init__(
+        self, boundary_condition, advect_function, dt, Re, p_iter, vorticity_confinement=None
+    ):
+        super().__init__(boundary_condition)
 
         self._advect = advect_function
-
         self.dt = dt
         self.Re = Re
+        self.p_iter = p_iter
+        self.vorticity_confinement = vorticity_confinement
 
         self.v = DoubleBuffers(self._resolution, 2)  # velocity
         self.p = DoubleBuffers(self._resolution, 1)  # pressure
-        self.p_iter = p_iter
 
         # initial condition
         self.v.current.fill(ti.Vector([0.4, 0.0]))
@@ -96,9 +73,8 @@ class MacSolver(Solver):
         self._clamp_field(self.v.next, -40.0, 40.0)
         self.v.swap()
 
-        if self.vor_epsilon is not None:
-            self._calc_vorticity(self.vor, self.vor_abs, self.v.current)
-            self._add_vorticity(self.v.next, self.v.current, self.vor, self.vor_abs)
+        if self.vorticity_confinement is not None:
+            self.vorticity_confinement.apply(self.v)
             self.v.swap()
 
         for _ in range(self.p_iter):
@@ -148,8 +124,11 @@ class MacSolver(Solver):
 class DyeMacSolver(MacSolver):
     """Maker And Cell method"""
 
-    def __init__(self, boundary_condition, advect_function, dt, Re, p_iter, vor_epsilon=None):
-        super().__init__(boundary_condition, advect_function, dt, Re, p_iter, vor_epsilon)
+    def __init__(
+        self, boundary_condition, advect_function, dt, Re, p_iter, vorticity_confinement=None
+    ):
+        super().__init__(boundary_condition, advect_function, dt, Re, p_iter, vorticity_confinement)
+
         self.dye = DoubleBuffers(self._resolution, 3)  # dye
 
     def update(self):
@@ -158,9 +137,8 @@ class DyeMacSolver(MacSolver):
         self._clamp_field(self.v.next, -40.0, 40.0)  # 発散しないようにクランプする
         self.v.swap()
 
-        if self.vor_epsilon is not None:
-            self._calc_vorticity(self.vor, self.vor_abs, self.v.current)
-            self._add_vorticity(self.v.next, self.v.current, self.vor, self.vor_abs)
+        if self.vorticity_confinement is not None:
+            self.vorticity_confinement.apply(self.v)
             self.v.swap()
 
         for _ in range(self.p_iter):
@@ -187,17 +165,17 @@ class DyeMacSolver(MacSolver):
 class CipMacSolver(Solver):
     """Maker And Cell method"""
 
-    def __init__(self, boundary_condition, dt, Re, p_iter, vor_epsilon=None):
-        super().__init__(boundary_condition, vor_epsilon)
+    def __init__(self, boundary_condition, dt, Re, p_iter, vorticity_confinement=None):
+        super().__init__(boundary_condition)
         self.dt = dt
         self.Re = Re
+        self.p_iter = p_iter
+        self.vorticity_confinement = vorticity_confinement
 
         self.v = DoubleBuffers(self._resolution, 2)  # velocity
         self.vx = DoubleBuffers(self._resolution, 2)  # velocity gradient x
         self.vy = DoubleBuffers(self._resolution, 2)  # velocity gradient y
         self.p = DoubleBuffers(self._resolution, 1)  # pressure
-
-        self.p_iter = p_iter
 
         # initial condition
         self._initialize()
@@ -219,9 +197,8 @@ class CipMacSolver(Solver):
         self._clamp_field(self.vx.current, -20.0, 20.0)
         self._clamp_field(self.vy.current, -20.0, 20.0)
 
-        if self.vor_epsilon is not None:
-            self._calc_vorticity(self.vor, self.vor_abs, self.v.current)
-            self._add_vorticity(self.v.next, self.v.current, self.vor, self.vor_abs)
+        if self.vorticity_confinement is not None:
+            self.vorticity_confinement.apply(self.v)
             self.v.swap()
 
         for _ in range(self.p_iter):
@@ -376,12 +353,12 @@ class CipMacSolver(Solver):
 class DyeCipMacSolver(CipMacSolver):
     """Maker And Cell method"""
 
-    def __init__(self, boundary_condition, dt, Re, p_iter, vor_epsilon=None):
+    def __init__(self, boundary_condition, dt, Re, p_iter, vorticity_confinement=None):
         self.dye = DoubleBuffers(boundary_condition.get_resolution(), 3)  # dye
         self.dyex = DoubleBuffers(boundary_condition.get_resolution(), 3)  # dye gradient x
         self.dyey = DoubleBuffers(boundary_condition.get_resolution(), 3)  # dye gradient y
 
-        super().__init__(boundary_condition, dt, Re, p_iter, vor_epsilon)
+        super().__init__(boundary_condition, dt, Re, p_iter, vorticity_confinement)
 
     def _initialize(self):
         self.v.current.fill(ti.Vector([0.4, 0.0]))
@@ -407,9 +384,8 @@ class DyeCipMacSolver(CipMacSolver):
         self._clamp_field(self.vx.current, -20.0, 20.0)
         self._clamp_field(self.vy.current, -20.0, 20.0)
 
-        if self.vor_epsilon is not None:
-            self._calc_vorticity(self.vor, self.vor_abs, self.v.current)
-            self._add_vorticity(self.v.next, self.v.current, self.vor, self.vor_abs)
+        if self.vorticity_confinement is not None:
+            self.vorticity_confinement.apply(self.v)
             self.v.swap()
 
         for _ in range(self.p_iter):
