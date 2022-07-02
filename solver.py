@@ -4,6 +4,8 @@ import taichi as ti
 
 from differentiation import diff2_x, diff2_y, diff_x, diff_y, sample, sign
 
+VELOCITY_LIMIT = 70.0
+
 
 class DoubleBuffers:
     def __init__(self, resolution, n_channel):
@@ -42,9 +44,11 @@ class Solver(metaclass=ABCMeta):
 
 
 @ti.kernel
-def clamp_field(field: ti.template(), low: float, high: float):
+def limit_field(field: ti.template(), limit: float):
     for i, j in field:
-        field[i, j] = ti.max(ti.min(field[i, j], high), low)
+        norm = field[i, j].norm()
+        if norm > limit:
+            field[i, j] = limit * (field[i, j] / norm)
 
 
 @ti.data_oriented
@@ -71,7 +75,6 @@ class MacSolver(Solver):
     def update(self):
         self._bc.set_boundary_condition(self.v.current, self.p.current)
         self._update_velocities(self.v.next, self.v.current, self.p.current)
-        clamp_field(self.v.next, -40.0, 40.0)
         self.v.swap()
 
         if self.vorticity_confinement is not None:
@@ -82,6 +85,8 @@ class MacSolver(Solver):
             self._bc.set_boundary_condition(self.v.current, self.p.current)
             self._update_pressures(self.p.next, self.p.current, self.v.current)
             self.p.swap()
+
+        limit_field(self.v.current, VELOCITY_LIMIT)
 
     def get_fields(self):
         return self.v.current, self.p.current
@@ -135,7 +140,6 @@ class DyeMacSolver(MacSolver):
     def update(self):
         self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
         self._update_velocities(self.v.next, self.v.current, self.p.current)
-        clamp_field(self.v.next, -40.0, 40.0)  # 発散しないようにクランプする
         self.v.swap()
 
         if self.vorticity_confinement is not None:
@@ -149,8 +153,9 @@ class DyeMacSolver(MacSolver):
 
         self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
         self._update_dye(self.dye.next, self.dye.current, self.v.current)
-        clamp_field(self.dye.next, 0.0, 1.0)  # 発散しないようにクランプする
         self.dye.swap()
+
+        limit_field(self.v.current, VELOCITY_LIMIT)
 
     def get_fields(self):
         return self.v.current, self.p.current, self.dye.current
@@ -194,9 +199,6 @@ class CipMacSolver(Solver):
     def update(self):
         self._bc.set_boundary_condition(self.v.current, self.p.current)
         self._update_velocities(self.v, self.vx, self.vy, self.p)
-        clamp_field(self.v.current, -40.0, 40.0)
-        clamp_field(self.vx.current, -20.0, 20.0)
-        clamp_field(self.vy.current, -20.0, 20.0)
 
         if self.vorticity_confinement is not None:
             self.vorticity_confinement.apply(self.v)
@@ -206,6 +208,8 @@ class CipMacSolver(Solver):
             self._bc.set_boundary_condition(self.v.current, self.p.current)
             self._update_pressures(self.p.next, self.p.current, self.v.current)
             self.p.swap()
+
+        limit_field(self.v.current, VELOCITY_LIMIT)
 
     def get_fields(self):
         return self.v.current, self.p.current
@@ -381,9 +385,6 @@ class DyeCipMacSolver(CipMacSolver):
     def update(self):
         self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
         self._update_velocities(self.v, self.vx, self.vy, self.p)
-        clamp_field(self.v.current, -40.0, 40.0)
-        clamp_field(self.vx.current, -20.0, 20.0)
-        clamp_field(self.vy.current, -20.0, 20.0)
 
         if self.vorticity_confinement is not None:
             self.vorticity_confinement.apply(self.v)
@@ -401,9 +402,9 @@ class DyeCipMacSolver(CipMacSolver):
             self.dyey,
             self.v,
         )
-        clamp_field(self.dye.current, 0.0, 1.0)
-        clamp_field(self.dyex.current, -1.0, 1.0)
-        clamp_field(self.dyey.current, -1.0, 1.0)
+
+        # 発散しないように流速を制限する。精度が低下する。
+        limit_field(self.v.current, VELOCITY_LIMIT)
 
     def get_fields(self):
         return self.v.current, self.p.current, self.dye.current
