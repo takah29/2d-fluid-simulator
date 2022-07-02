@@ -13,7 +13,7 @@ def visualize_norm(vec):
 
 @ti.func
 def visualize_pressure(val):
-    return ti.Vector([max(val, 0.0), 0.0, 4 * max(-val, 0.0)])
+    return ti.Vector([max(val, 0.0), 0.0, max(-val, 0.0)])
 
 
 @ti.func
