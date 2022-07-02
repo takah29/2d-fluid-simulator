@@ -40,10 +40,11 @@ class Solver(metaclass=ABCMeta):
     def is_wall(self, i, j):
         return self._bc.is_wall(i, j)
 
-    @ti.kernel
-    def _clamp_field(self, field: ti.template(), low: float, high: float):
-        for i, j in field:
-            field[i, j] = ti.max(ti.min(field[i, j], high), low)
+
+@ti.kernel
+def clamp_field(field: ti.template(), low: float, high: float):
+    for i, j in field:
+        field[i, j] = ti.max(ti.min(field[i, j], high), low)
 
 
 @ti.data_oriented
@@ -70,7 +71,7 @@ class MacSolver(Solver):
     def update(self):
         self._bc.set_boundary_condition(self.v.current, self.p.current)
         self._update_velocities(self.v.next, self.v.current, self.p.current)
-        self._clamp_field(self.v.next, -40.0, 40.0)
+        clamp_field(self.v.next, -40.0, 40.0)
         self.v.swap()
 
         if self.vorticity_confinement is not None:
@@ -134,7 +135,7 @@ class DyeMacSolver(MacSolver):
     def update(self):
         self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
         self._update_velocities(self.v.next, self.v.current, self.p.current)
-        self._clamp_field(self.v.next, -40.0, 40.0)  # 発散しないようにクランプする
+        clamp_field(self.v.next, -40.0, 40.0)  # 発散しないようにクランプする
         self.v.swap()
 
         if self.vorticity_confinement is not None:
@@ -148,7 +149,7 @@ class DyeMacSolver(MacSolver):
 
         self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
         self._update_dye(self.dye.next, self.dye.current, self.v.current)
-        self._clamp_field(self.dye.next, 0.0, 1.0)  # 発散しないようにクランプする
+        clamp_field(self.dye.next, 0.0, 1.0)  # 発散しないようにクランプする
         self.dye.swap()
 
     def get_fields(self):
@@ -193,9 +194,9 @@ class CipMacSolver(Solver):
     def update(self):
         self._bc.set_boundary_condition(self.v.current, self.p.current)
         self._update_velocities(self.v, self.vx, self.vy, self.p)
-        self._clamp_field(self.v.current, -40.0, 40.0)
-        self._clamp_field(self.vx.current, -20.0, 20.0)
-        self._clamp_field(self.vy.current, -20.0, 20.0)
+        clamp_field(self.v.current, -40.0, 40.0)
+        clamp_field(self.vx.current, -20.0, 20.0)
+        clamp_field(self.vy.current, -20.0, 20.0)
 
         if self.vorticity_confinement is not None:
             self.vorticity_confinement.apply(self.v)
@@ -380,9 +381,9 @@ class DyeCipMacSolver(CipMacSolver):
     def update(self):
         self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
         self._update_velocities(self.v, self.vx, self.vy, self.p)
-        self._clamp_field(self.v.current, -40.0, 40.0)
-        self._clamp_field(self.vx.current, -20.0, 20.0)
-        self._clamp_field(self.vy.current, -20.0, 20.0)
+        clamp_field(self.v.current, -40.0, 40.0)
+        clamp_field(self.vx.current, -20.0, 20.0)
+        clamp_field(self.vy.current, -20.0, 20.0)
 
         if self.vorticity_confinement is not None:
             self.vorticity_confinement.apply(self.v)
@@ -400,9 +401,9 @@ class DyeCipMacSolver(CipMacSolver):
             self.dyey,
             self.v,
         )
-        self._clamp_field(self.dye.current, 0.0, 1.0)
-        self._clamp_field(self.dyex.current, -1.0, 1.0)
-        self._clamp_field(self.dyey.current, -1.0, 1.0)
+        clamp_field(self.dye.current, 0.0, 1.0)
+        clamp_field(self.dyex.current, -1.0, 1.0)
+        clamp_field(self.dyey.current, -1.0, 1.0)
 
     def get_fields(self):
         return self.v.current, self.p.current, self.dye.current
