@@ -40,7 +40,7 @@ class BoundaryCondition:
     def _set_outflow_bc(self, vc, pc, bc_mask, i, j):
         # 右側のみ
         if bc_mask[i, j] == 3:
-            vc[i, j].x = max(vc[i - 1, j].x, 0.0)  # 逆流しないようにする
+            vc[i, j].x = max(vc[i - 1, j].x, 1.0)  # 逆流しないようにする
             pc[i, j] = 0.0
 
     @ti.func
