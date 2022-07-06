@@ -31,8 +31,8 @@ def visualize_hue(vec):
     h /= 2 * pi
 
     m = ti.sqrt(vec.x**2 + vec.y**2)
-    ranges = 0
-    rangee = 1
+    ranges = 0.0
+    rangee = 10.0
 
     while m > rangee:
         ranges = rangee
