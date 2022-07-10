@@ -51,6 +51,12 @@ def limit_field(field: ti.template(), limit: ti.f32):
             field[i, j] = limit * (field[i, j] / norm)
 
 
+@ti.kernel
+def clamp_field(field: ti.template(), low: ti.f32, high: ti.f32):
+    for i, j in field:
+        field[i, j] = min(max(field[i, j], low), high)
+
+
 @ti.data_oriented
 class MacSolver(Solver):
     """Maker And Cell method"""
@@ -148,11 +154,12 @@ class DyeMacSolver(MacSolver):
             self._update_pressures(self.p.next, self.p.current, self.v.current)
             self.p.swap()
 
+        limit_field(self.v.current, VELOCITY_LIMIT)
+
         self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
         self._update_dye(self.dye.next, self.dye.current, self.v.current)
         self.dye.swap()
-
-        limit_field(self.v.current, VELOCITY_LIMIT)
+        clamp_field(self.dye.current, 0.0, 1.0)
 
     def get_fields(self):
         return self.v.current, self.p.current, self.dye.current
@@ -362,6 +369,9 @@ class DyeCipMacSolver(CipMacSolver):
             self._update_pressures(self.p.next, self.p.current, self.v.current)
             self.p.swap()
 
+        # 発散しないように流速を制限する。精度が低下する。
+        limit_field(self.v.current, VELOCITY_LIMIT)
+
         self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
         self._update_dye(
             self.dye,
@@ -369,9 +379,7 @@ class DyeCipMacSolver(CipMacSolver):
             self.dyey,
             self.v,
         )
-
-        # 発散しないように流速を制限する。精度が低下する。
-        limit_field(self.v.current, VELOCITY_LIMIT)
+        clamp_field(self.dye.current, 0.0, 1.0)
 
     def get_fields(self):
         return self.v.current, self.p.current, self.dye.current
