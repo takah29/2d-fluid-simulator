@@ -14,7 +14,7 @@ class BoundaryCondition:
         bc_const, bc_mask = ti.static(self._bc_const, self._bc_mask)
         for i, j in vc:
             self._set_wall_bc(vc, bc_const, bc_mask, i, j)
-            self._set_inflow_bc(vc, bc_const, bc_mask, i, j)
+            self._set_inflow_bc(vc, pc, bc_const, bc_mask, i, j)
             self._set_outflow_bc(vc, pc, bc_mask, i, j)
             if 0 < i < vc.shape[0] - 1 and 0 < j < vc.shape[1] - 1:
                 self._set_inside_wall_bc(vc, pc, bc_mask, i, j)
@@ -32,9 +32,10 @@ class BoundaryCondition:
             vc[i, j] = bc_const[i, j]
 
     @ti.func
-    def _set_inflow_bc(self, vc, bc_const, bc_mask, i, j):
+    def _set_inflow_bc(self, vc, pc, bc_const, bc_mask, i, j):
         if bc_mask[i, j] == 2:
             vc[i, j] = bc_const[i, j]
+            pc[i, j] = pc[i + 1, j]
 
     @ti.func
     def _set_outflow_bc(self, vc, pc, bc_mask, i, j):
@@ -92,7 +93,7 @@ class DyeBoundaryCondition(BoundaryCondition):
         bc_const, bc_dye, bc_mask = ti.static(self._bc_const, self._bc_dye, self._bc_mask)
         for i, j in vc:
             self._set_wall_bc(vc, bc_const, bc_mask, i, j)
-            self._set_inflow_bc(vc, bc_const, bc_mask, i, j)
+            self._set_inflow_bc(vc, pc, bc_const, bc_mask, i, j)
             self._set_indye_bc(dye, bc_dye, bc_mask, i, j)
             self._set_outflow_bc(vc, pc, bc_mask, i, j)
             if 0 < i < vc.shape[0] - 1 and 0 < j < vc.shape[1] - 1:
