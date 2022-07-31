@@ -169,6 +169,25 @@ def set_obstacle_fromfile(bc, bc_mask, bc_dye, filepath):
     bc_dye[mask_indices] = np.array([0.0, 0.0, 0.0])
 
 
+def get_boundary_condition(num, resolution, no_dye):
+    if num == 1:
+        boundary_condition = create_boundary_condition1(resolution, no_dye)
+    elif num == 2:
+        boundary_condition = create_boundary_condition2(resolution, no_dye)
+    elif num == 3:
+        boundary_condition = create_boundary_condition3(resolution, no_dye)
+    elif num == 4:
+        boundary_condition = create_boundary_condition4(resolution, no_dye)
+    elif num == 5:
+        boundary_condition = create_boundary_condition5(resolution, no_dye)
+    elif num == 6:
+        boundary_condition = create_boundary_condition6(resolution, no_dye)
+    else:
+        raise NotImplementedError
+
+    return boundary_condition
+
+
 def create_boundary_condition1(resolution, no_dye=False):
     # 1: 壁, 2: 流入部, 3: 流出部
     x_res, y_res = 2 * resolution, resolution
