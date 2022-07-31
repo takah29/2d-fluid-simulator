@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 
 import taichi as ti
 
-from differentiation import diff2_x, diff2_y, diff_x, diff_y, sample, sign
+from differentiation import diff2_x, diff2_y, diff_x, diff_y, sign
 
 VELOCITY_LIMIT = 70.0
 
@@ -62,21 +62,28 @@ class MacSolver(Solver):
     """Maker And Cell method"""
 
     def __init__(
-        self, boundary_condition, advect_function, dt, Re, p_iter, vorticity_confinement=None
+        self,
+        boundary_condition,
+        pressure_updater,
+        advect_function,
+        dt,
+        Re,
+        vorticity_confinement=None,
     ):
         super().__init__(boundary_condition)
 
         self._advect = advect_function
         self.dt = dt
         self.Re = Re
-        self.p_iter = p_iter
+
+        self.pressure_updater = pressure_updater
         self.vorticity_confinement = vorticity_confinement
 
         self.v = DoubleBuffers(self._resolution, 2)  # velocity
         self.p = DoubleBuffers(self._resolution, 1)  # pressure
 
     def update(self):
-        self._bc.set_boundary_condition(self.v.current, self.p.current)
+        self._bc.set_velocity_boundary_condition(self.v.current)
         self._update_velocities(self.v.next, self.v.current, self.p.current)
         self.v.swap()
 
@@ -84,10 +91,7 @@ class MacSolver(Solver):
             self.vorticity_confinement.apply(self.v)
             self.v.swap()
 
-        for _ in range(self.p_iter):
-            self._bc.set_boundary_condition(self.v.current, self.p.current)
-            self._update_pressures(self.p.next, self.p.current, self.v.current)
-            self.p.swap()
+        self.pressure_updater.update(self.p, self.v.current)
 
         limit_field(self.v.current, VELOCITY_LIMIT)
 
@@ -109,39 +113,33 @@ class MacSolver(Solver):
                     + (diff2_x(vc, i, j) + diff2_y(vc, i, j)) / self.Re
                 )
 
-    @ti.kernel
-    def _update_pressures(self, pn: ti.template(), pc: ti.template(), vc: ti.template()):
-        for i, j in pn:
-            if not self._bc.is_wall(i, j):
-                dx = diff_x(vc, i, j)
-                dy = diff_y(vc, i, j)
-                pn[i, j] = (
-                    (
-                        sample(pc, i + 1, j)
-                        + sample(pc, i - 1, j)
-                        + sample(pc, i, j + 1)
-                        + sample(pc, i, j - 1)
-                    )
-                    - (dx.x + dy.y) / self.dt
-                    + dx.x**2
-                    + dy.y**2
-                    + 2 * dy.x * dx.y
-                ) * 0.25
-
 
 @ti.data_oriented
 class DyeMacSolver(MacSolver):
     """Maker And Cell method"""
 
     def __init__(
-        self, boundary_condition, advect_function, dt, Re, p_iter, vorticity_confinement=None
+        self,
+        boundary_condition,
+        pressure_updater,
+        advect_function,
+        dt,
+        Re,
+        vorticity_confinement=None,
     ):
-        super().__init__(boundary_condition, advect_function, dt, Re, p_iter, vorticity_confinement)
+        super().__init__(
+            boundary_condition,
+            pressure_updater,
+            advect_function,
+            dt,
+            Re,
+            vorticity_confinement,
+        )
 
         self.dye = DoubleBuffers(self._resolution, 3)  # dye
 
     def update(self):
-        self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
+        self._bc.set_velocity_boundary_condition(self.v.current)
         self._update_velocities(self.v.next, self.v.current, self.p.current)
         self.v.swap()
 
@@ -149,14 +147,11 @@ class DyeMacSolver(MacSolver):
             self.vorticity_confinement.apply(self.v)
             self.v.swap()
 
-        for _ in range(self.p_iter):
-            self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
-            self._update_pressures(self.p.next, self.p.current, self.v.current)
-            self.p.swap()
+        self.pressure_updater.update(self.p, self.v.current)
 
         limit_field(self.v.current, VELOCITY_LIMIT)
 
-        self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
+        self._bc.set_dye_boundary_condition(self.dye.current)
         self._update_dye(self.dye.next, self.dye.current, self.v.current)
         self.dye.swap()
         clamp_field(self.dye.current, 0.0, 1.0)
@@ -175,11 +170,12 @@ class DyeMacSolver(MacSolver):
 class CipMacSolver(Solver):
     """Maker And Cell method"""
 
-    def __init__(self, boundary_condition, dt, Re, p_iter, vorticity_confinement=None):
+    def __init__(self, boundary_condition, pressure_updater, dt, Re, vorticity_confinement=None):
         super().__init__(boundary_condition)
         self.dt = dt
         self.Re = Re
-        self.p_iter = p_iter
+
+        self.pressure_updater = pressure_updater
         self.vorticity_confinement = vorticity_confinement
 
         self.v = DoubleBuffers(self._resolution, 2)  # velocity
@@ -190,17 +186,14 @@ class CipMacSolver(Solver):
         self._set_grad(self.vx.current, self.vy.current, self.v.current)
 
     def update(self):
-        self._bc.set_boundary_condition(self.v.current, self.p.current)
+        self._bc.set_velocity_boundary_condition(self.v.current)
         self._update_velocities(self.v, self.vx, self.vy, self.p)
 
         if self.vorticity_confinement is not None:
             self.vorticity_confinement.apply(self.v)
             self.v.swap()
 
-        for _ in range(self.p_iter):
-            self._bc.set_boundary_condition(self.v.current, self.p.current)
-            self._update_pressures(self.p.next, self.p.current, self.v.current)
-            self.p.swap()
+        self.pressure_updater.update(self.p, self.v.current)
 
         limit_field(self.v.current, VELOCITY_LIMIT)
 
@@ -237,12 +230,15 @@ class CipMacSolver(Solver):
         """中間量の計算"""
         for i, j in fn:
             if not self._bc.is_wall(i, j):
-                G = -ti.Vector(
-                    [
-                        diff_x(pc, i, j),
-                        diff_y(pc, i, j),
-                    ]
-                ) + self._calc_diffusion(fc, i, j)
+                G = (
+                    -ti.Vector(
+                        [
+                            diff_x(pc, i, j),
+                            diff_y(pc, i, j),
+                        ]
+                    )
+                    + self._calc_diffusion(fc, i, j)
+                )
                 fn[i, j] = fc[i, j] + G * self.dt
 
     @ti.kernel
@@ -323,56 +319,31 @@ class CipMacSolver(Solver):
         fxn[i, j] = Fx - self.dt * (Fx * dx.x + Fy * dx.y) / 2.0
         fyn[i, j] = Fy - self.dt * (Fx * dy.x + Fy * dy.y) / 2.0
 
-    @ti.kernel
-    def _update_pressures(self, pn: ti.template(), pc: ti.template(), fc: ti.template()):
-        for i, j in pn:
-            if not self._bc.is_wall(i, j):
-                dx = diff_x(fc, i, j)
-                dy = diff_y(fc, i, j)
-                pn[i, j] = (
-                    (
-                        sample(pc, i + 1, j)
-                        + sample(pc, i - 1, j)
-                        + sample(pc, i, j + 1)
-                        + sample(pc, i, j - 1)
-                    )
-                    - (dx.x + dy.y) / self.dt
-                    + dx.x**2
-                    + dy.y**2
-                    + 2 * dy.x * dx.y
-                ) * 0.25
-
 
 @ti.data_oriented
 class DyeCipMacSolver(CipMacSolver):
-    """Maker And Cell method"""
+    def __init__(self, boundary_condition, pressure_updater, dt, Re, vorticity_confinement=None):
+        super().__init__(boundary_condition, pressure_updater, dt, Re, vorticity_confinement)
 
-    def __init__(self, boundary_condition, dt, Re, p_iter, vorticity_confinement=None):
         self.dye = DoubleBuffers(boundary_condition.get_resolution(), 3)  # dye
         self.dyex = DoubleBuffers(boundary_condition.get_resolution(), 3)  # dye gradient x
         self.dyey = DoubleBuffers(boundary_condition.get_resolution(), 3)  # dye gradient y
-
-        super().__init__(boundary_condition, dt, Re, p_iter, vorticity_confinement)
-
         self._set_grad(self.dyex.current, self.dyey.current, self.dye.current)
 
     def update(self):
-        self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
+        self._bc.set_velocity_boundary_condition(self.v.current)
         self._update_velocities(self.v, self.vx, self.vy, self.p)
 
         if self.vorticity_confinement is not None:
             self.vorticity_confinement.apply(self.v)
             self.v.swap()
 
-        for _ in range(self.p_iter):
-            self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
-            self._update_pressures(self.p.next, self.p.current, self.v.current)
-            self.p.swap()
+        self.pressure_updater.update(self.p, self.v.current)
 
         # 発散しないように流速を制限する。精度が低下する。
         limit_field(self.v.current, VELOCITY_LIMIT)
 
-        self._bc.set_boundary_condition(self.v.current, self.p.current, self.dye.current)
+        self._bc.set_dye_boundary_condition(self.dye.current)
         self._update_dye(
             self.dye,
             self.dyex,

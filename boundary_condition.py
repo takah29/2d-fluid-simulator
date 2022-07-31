@@ -10,14 +10,50 @@ class BoundaryCondition:
         self._bc_const, self._bc_mask = BoundaryCondition.to_field(bc_const, bc_mask)
 
     @ti.kernel
-    def set_boundary_condition(self, vc: ti.template(), pc: ti.template()):
-        bc_const, bc_mask = ti.static(self._bc_const, self._bc_mask)
+    def set_velocity_boundary_condition(self, vc: ti.template()):
+        bc_mask = ti.static(self._bc_mask)
         for i, j in vc:
-            self._set_wall_bc(vc, bc_const, bc_mask, i, j)
-            self._set_inflow_bc(vc, pc, bc_const, bc_mask, i, j)
-            self._set_outflow_bc(vc, pc, bc_mask, i, j)
-            if 0 < i < vc.shape[0] - 1 and 0 < j < vc.shape[1] - 1:
-                self._set_inside_wall_bc(vc, pc, bc_mask, i, j)
+            if bc_mask[i, j] == 1:
+                # for kk scheme
+                # 壁内部の境界条件を設定、壁の厚さは片側2ピクセル以上を仮定する
+                if bc_mask[i - 1, j] == 0 and bc_mask[i, j - 1] == 1 and bc_mask[i, j + 1] == 1:
+                    vc[i + 1, j] = -vc[i - 1, j]
+                elif bc_mask[i + 1, j] == 0 and bc_mask[i, j - 1] == 1 and bc_mask[i, j + 1] == 1:
+                    vc[i - 1, j] = -vc[i + 1, j]
+                elif bc_mask[i, j - 1] == 0 and bc_mask[i - 1, j] == 1 and bc_mask[i + 1, j] == 1:
+                    vc[i, j + 1] = -vc[i, j - 1]
+                elif bc_mask[i, j + 1] == 0 and bc_mask[i - 1, j] == 1 and bc_mask[i + 1, j] == 1:
+                    vc[i, j - 1] = -vc[i, j + 1]
+            elif bc_mask[i, j] == 2:
+                vc[i, j] = self._bc_const[i, j]
+            elif bc_mask[i, j] == 3:
+                vc[i, j].x = max(vc[i - 1, j].x, 1.0)  # 逆流しないようにする
+
+    @ti.kernel
+    def set_pressure_boundary_condition(self, pc: ti.template()):
+        bc_mask = ti.static(self._bc_mask)
+        for i, j in pc:
+            if bc_mask[i, j] == 1:
+                if bc_mask[i - 1, j] == 0 and bc_mask[i, j - 1] == 1 and bc_mask[i, j + 1] == 1:
+                    pc[i, j] = pc[i - 1, j]
+                elif bc_mask[i + 1, j] == 0 and bc_mask[i, j - 1] == 1 and bc_mask[i, j + 1] == 1:
+                    pc[i, j] = pc[i + 1, j]
+                elif bc_mask[i, j - 1] == 0 and bc_mask[i - 1, j] == 1 and bc_mask[i + 1, j] == 1:
+                    pc[i, j] = pc[i, j - 1]
+                elif bc_mask[i, j + 1] == 0 and bc_mask[i - 1, j] == 1 and bc_mask[i + 1, j] == 1:
+                    pc[i, j] = pc[i, j + 1]
+                elif bc_mask[i - 1, j] == 0 and bc_mask[i, j + 1] == 0:
+                    pc[i, j] = (pc[i - 1, j] + pc[i, j + 1]) / 2.0
+                elif bc_mask[i + 1, j] == 0 and bc_mask[i, j + 1] == 0:
+                    pc[i, j] = (pc[i + 1, j] + pc[i, j + 1]) / 2.0
+                elif bc_mask[i - 1, j] == 0 and bc_mask[i, j - 1] == 0:
+                    pc[i, j] = (pc[i - 1, j] + pc[i, j - 1]) / 2.0
+                elif bc_mask[i + 1, j] == 0 and bc_mask[i, j - 1] == 0:
+                    pc[i, j] = (pc[i + 1, j] + pc[i, j - 1]) / 2.0
+            elif bc_mask[i, j] == 2:
+                pc[i, j] = pc[i + 1, j]
+            elif bc_mask[i, j] == 3:
+                pc[i, j] = 0.0
 
     @ti.func
     def is_wall(self, i, j):
@@ -25,52 +61,6 @@ class BoundaryCondition:
 
     def get_resolution(self):
         return self._bc_const.shape[:2]
-
-    @ti.func
-    def _set_wall_bc(self, vc, bc_const, bc_mask, i, j):
-        if bc_mask[i, j] == 1:
-            vc[i, j] = bc_const[i, j]
-
-    @ti.func
-    def _set_inflow_bc(self, vc, pc, bc_const, bc_mask, i, j):
-        if bc_mask[i, j] == 2:
-            vc[i, j] = bc_const[i, j]
-            pc[i, j] = pc[i + 1, j]
-
-    @ti.func
-    def _set_outflow_bc(self, vc, pc, bc_mask, i, j):
-        # 右側のみ
-        if bc_mask[i, j] == 3:
-            vc[i, j].x = max(vc[i - 1, j].x, 1.0)  # 逆流しないようにする
-            pc[i, j] = 0.0
-
-    @ti.func
-    def _set_inside_wall_bc(self, vc, pc, bc_mask, i, j):
-        """壁内部の境界条件を設定する
-
-        ※ 壁の厚さは片側2ピクセル以上を仮定
-        """
-        if bc_mask[i, j] == 1:
-            if bc_mask[i - 1, j] == 0 and bc_mask[i, j - 1] == 1 and bc_mask[i, j + 1] == 1:
-                pc[i, j] = pc[i - 1, j]
-                vc[i + 1, j] = -vc[i - 1, j]  # for kk scheme
-            elif bc_mask[i + 1, j] == 0 and bc_mask[i, j - 1] == 1 and bc_mask[i, j + 1] == 1:
-                pc[i, j] = pc[i + 1, j]
-                vc[i - 1, j] = -vc[i + 1, j]  # for kk scheme
-            elif bc_mask[i, j - 1] == 0 and bc_mask[i - 1, j] == 1 and bc_mask[i + 1, j] == 1:
-                pc[i, j] = pc[i, j - 1]
-                vc[i, j + 1] = -vc[i, j - 1]  # for kk scheme
-            elif bc_mask[i, j + 1] == 0 and bc_mask[i - 1, j] == 1 and bc_mask[i + 1, j] == 1:
-                pc[i, j] = pc[i, j + 1]
-                vc[i, j - 1] = -vc[i, j + 1]  # for kk scheme
-            elif bc_mask[i - 1, j] == 0 and bc_mask[i, j + 1] == 0:
-                pc[i, j] = (pc[i - 1, j] + pc[i, j + 1]) / 2.0
-            elif bc_mask[i + 1, j] == 0 and bc_mask[i, j + 1] == 0:
-                pc[i, j] = (pc[i + 1, j] + pc[i, j + 1]) / 2.0
-            elif bc_mask[i - 1, j] == 0 and bc_mask[i, j - 1] == 0:
-                pc[i, j] = (pc[i - 1, j] + pc[i, j - 1]) / 2.0
-            elif bc_mask[i + 1, j] == 0 and bc_mask[i, j - 1] == 0:
-                pc[i, j] = (pc[i + 1, j] + pc[i, j - 1]) / 2.0
 
     @staticmethod
     def to_field(bc, bc_mask):
@@ -89,15 +79,11 @@ class DyeBoundaryCondition(BoundaryCondition):
         )
 
     @ti.kernel
-    def set_boundary_condition(self, vc: ti.template(), pc: ti.template(), dye: ti.template()):
-        bc_const, bc_dye, bc_mask = ti.static(self._bc_const, self._bc_dye, self._bc_mask)
-        for i, j in vc:
-            self._set_wall_bc(vc, bc_const, bc_mask, i, j)
-            self._set_inflow_bc(vc, pc, bc_const, bc_mask, i, j)
-            self._set_indye_bc(dye, bc_dye, bc_mask, i, j)
-            self._set_outflow_bc(vc, pc, bc_mask, i, j)
-            if 0 < i < vc.shape[0] - 1 and 0 < j < vc.shape[1] - 1:
-                self._set_inside_wall_bc(vc, pc, bc_mask, i, j)
+    def set_dye_boundary_condition(self, dye: ti.template()):
+        bc_mask = ti.static(self._bc_mask)
+        for i, j in dye:
+            if bc_mask[i, j] == 2:
+                dye[i, j] = self._bc_dye[i, j]
 
     @staticmethod
     def to_field(bc, bc_dye, bc_mask):
@@ -109,11 +95,6 @@ class DyeBoundaryCondition(BoundaryCondition):
         bc_mask_field.from_numpy(bc_mask)
 
         return bc_field, bc_dye_field, bc_mask_field
-
-    @ti.func
-    def _set_indye_bc(self, dye, bc_dye, bc_mask, i, j):
-        if bc_mask[i, j] == 2:
-            dye[i, j] = bc_dye[i, j]
 
 
 def create_bc_array(x_resolution, y_resolution):
@@ -346,20 +327,30 @@ def create_boundary_condition4(resolution, no_dye=False):
 
     # 流入部の設定
     def set_inflow():
-        size = y_res // 5
+        y = np.array([1.1, 1.1, 0.2])
+        b = np.array([0.2, 0.2, 1.1])
+        r = np.array([1.1, 0.2, 0.2])
+        c = np.array([0.2, 1.1, 1.1])
+        color_map = create_color_map([c, r, b, y], y_res // 4 - 2)
+        bc_dye[:2, 3 * y_res // 4 : -2] = np.stack((color_map, color_map), axis=0)
+        bc_dye[:2, 2 : y_res // 4] = np.stack((color_map, color_map), axis=0)
 
-        # 下
-        bc[size : 2 * size, :2] = np.array([8.0, 16.0])
-        bc_dye[size : 2 * size, :2] = np.array([1.2, 1.2, 0.2])
-        bc_mask[size : 2 * size, :2] = 2
+        # 左上
+        bc[:2, 3 * y_res // 4 : -2] = np.array([20.0, 0.0])
+        bc[:2, 2 : y_res // 4] = np.array([20.0, 0.0])
+        # bc_dye[:2, 3 * y_res // 4 : -2] = np.array([1.2, 1.2, 0.2])
+        bc_mask[:2, 3 * y_res // 4 : -2] = 2
+        bc_mask[:2, 2 : y_res // 4] = 2
 
-        # 上
-        bc[-2 * size : -size, -2:] = np.array([-8.0, -16.0])
-        bc_dye[-2 * size : -size, -2:] = np.array([0.2, 0.2, 1.2])
-        bc_mask[-2 * size : -size, -2:] = 2
+    # 流出部の設定
+    def set_outflow():
+        # 右下
+        bc[-3:, 3 * y_res // 8 : 5 * y_res // 8] = np.array([20.0, 0.0])
+        bc_mask[-3:, 3 * y_res // 8 : 5 * y_res // 8] = 3
 
     set_wall()
     set_inflow()
+    set_outflow()
 
     if no_dye:
         boundary_condition = BoundaryCondition(bc, bc_mask)

@@ -11,7 +11,7 @@ class PressureUpdater(metaclass=ABCMeta):
         self.dt = dt
 
     @abstractmethod
-    def update(self, p_next, p_current, v_current):
+    def update(self, p, v_current):
         pass
 
 
