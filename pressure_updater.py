@@ -22,8 +22,8 @@ def predict_p(pc, vc, dt, i, j):
     pred_p = (
         (sample(pc, i + 1, j) + sample(pc, i - 1, j) + sample(pc, i, j + 1) + sample(pc, i, j - 1))
         - (dx.x + dy.y) / dt
-        + dx.x ** 2
-        + dy.y ** 2
+        + dx.x**2
+        + dy.y**2
         + 2 * dy.x * dx.y
     ) * 0.25
 

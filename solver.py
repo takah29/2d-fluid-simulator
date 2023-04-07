@@ -233,7 +233,7 @@ class CipMacSolver(Solver):
     ):
         """中間量の計算"""
         for i, j in fn:
-            if not self._bc.is_wall(i, j):
+            if not self.is_wall(i, j):
                 G = (
                     -ti.Vector(
                         [
@@ -257,7 +257,7 @@ class CipMacSolver(Solver):
     ):
         """中間量の勾配の計算"""
         for i, j in fn:
-            if not self._bc.is_wall(i, j):
+            if not self.is_wall(i, j):
                 # 勾配の更新
                 fxn[i, j] = (
                     fxc[i, j] + (fn[i + 1, j] - fc[i + 1, j] - fn[i - 1, j] + fc[i - 1, j]) / 2.0
@@ -367,7 +367,7 @@ class DyeCipMacSolver(CipMacSolver):
     ):
         """中間量の計算"""
         for i, j in dn:
-            if not self._bc.is_wall(i, j):
+            if not self.is_wall(i, j):
                 dn[i, j] = dc[i, j] + self._calc_diffusion(dc, i, j) * self.dt
 
     def _update_dye(self, dye, dyex, dyey, v):
