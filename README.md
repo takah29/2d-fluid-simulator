@@ -19,8 +19,8 @@
 
 ## Requirements
 
-- Python 3.9
-- Taichi 1.0
+- Python 3.10
+- Taichi 1.5
 
 GeForce GTX 1080 or higher recommended.
 
@@ -28,7 +28,7 @@ GeForce GTX 1080 or higher recommended.
 
 - Boundary Condition 1, Reynolds Number = 0.2, dt = 0.01
   ```bash
-  python main.py -re 1.0
+  python main.py -re 0.2
   ```
   Press `V` key switches the flow visualization method.
 - Boundary Condition 2, Reynolds Number = 100.0, resolution = 800, dt = 0.01
