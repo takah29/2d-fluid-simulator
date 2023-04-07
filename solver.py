@@ -42,6 +42,10 @@ class Solver(metaclass=ABCMeta):
     def is_wall(self, i, j):
         return self._bc.is_wall(i, j)
 
+    @ti.func
+    def is_fluid_domain(self, i, j):
+        return self._bc.is_fluid_domain(i, j)
+
 
 @ti.kernel
 def limit_field(field: ti.template(), limit: ti.f32):
@@ -101,7 +105,7 @@ class MacSolver(Solver):
     @ti.kernel
     def _update_velocities(self, vn: ti.template(), vc: ti.template(), pc: ti.template()):
         for i, j in vn:
-            if not self._bc.is_wall(i, j):
+            if self.is_fluid_domain(i, j):
                 vn[i, j] = vc[i, j] + self.dt * (
                     -self._advect(vc, vc, i, j)
                     - ti.Vector(
@@ -162,7 +166,7 @@ class DyeMacSolver(MacSolver):
     @ti.kernel
     def _update_dye(self, dn: ti.template(), dc: ti.template(), vc: ti.template()):
         for i, j in dn:
-            if not self._bc.is_wall(i, j):
+            if self.is_fluid_domain(i, j):
                 dn[i, j] = dc[i, j] - self.dt * self._advect(vc, dc, i, j)
 
 
@@ -278,7 +282,7 @@ class CipMacSolver(Solver):
         v: ti.template(),
     ):
         for i, j in fn:
-            if not self._bc.is_wall(i, j):
+            if self.is_fluid_domain(i, j):
                 self._cip_advect(fn, fxn, fyn, fc, fxc, fyc, v, i, j)
 
     @ti.func

@@ -18,7 +18,7 @@ class VorticityConfinement:
     @ti.kernel
     def _calc_vorticity(self, vc: ti.template()):
         for i, j in self.vorticity:
-            if not self._bc.is_wall(i, j):
+            if self._bc.is_fluid_domain(i, j):
                 self.vorticity[i, j] = diff_x(vc, i, j).y - diff_y(vc, i, j).x
                 self.vorticity_abs[i, j] = ti.abs(self.vorticity[i, j])
 
@@ -29,7 +29,7 @@ class VorticityConfinement:
         vc: ti.template(),
     ):
         for i, j in vn:
-            if not self._bc.is_wall(i, j):
+            if self._bc.is_fluid_domain(i, j):
                 vn[i, j] = vc[i, j] + self.dt * self.weight * self._vorticity_vec(i, j)
 
     @ti.func

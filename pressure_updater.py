@@ -78,14 +78,14 @@ class RedBlackSorPressureUpdater(PressureUpdater):
     def _update_pressures_odd(self, pn: ti.template(), pc: ti.template(), vc: ti.template()):
         for i, j in pn:
             if (i + j) % 2 == 1:
-                if not self._bc.is_wall(i, j):
+                if self._bc.is_fluid_domain(i, j):
                     pn[i, j] = self._pn_ij(pc, vc, i, j)
 
     @ti.kernel
     def _update_pressures_even(self, pn: ti.template(), pc: ti.template(), vc: ti.template()):
         for i, j in pn:
             if (i + j) % 2 == 0:
-                if not self._bc.is_wall(i, j):
+                if self._bc.is_fluid_domain(i, j):
                     pn[i, j] = self._pn_ij(pc, vc, i, j)
 
     @ti.func
