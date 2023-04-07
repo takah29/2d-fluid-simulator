@@ -59,6 +59,10 @@ class BoundaryCondition:
     def is_wall(self, i, j):
         return self._bc_mask[i, j] == 1
 
+    @ti.func
+    def is_fluid_domain(self, i, j):
+        return self._bc_mask[i, j] == 0
+
     def get_resolution(self):
         return self._bc_const.shape[:2]
 
