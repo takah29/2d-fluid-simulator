@@ -27,7 +27,7 @@ class BoundaryCondition:
             elif bc_mask[i, j] == 2:
                 vc[i, j] = self._bc_const[i, j]
             elif bc_mask[i, j] == 3:
-                vc[i, j].x = max(vc[i - 1, j].x, 1.0)  # 逆流しないようにする
+                vc[i, j].x = ti.max(vc[i - 1, j].x, 1.0)  # 逆流しないようにする
 
     @ti.kernel
     def set_pressure_boundary_condition(self, pc: ti.template()):

@@ -3,8 +3,8 @@ import taichi as ti
 
 @ti.func
 def sample(field, i, j):
-    i = max(0, min(field.shape[0] - 1, i))
-    j = max(0, min(field.shape[1] - 1, j))
+    i = ti.max(0, ti.min(field.shape[0] - 1, i))
+    j = ti.max(0, ti.min(field.shape[1] - 1, j))
     idx = ti.Vector([int(i), int(j)])
     return field[idx]
 

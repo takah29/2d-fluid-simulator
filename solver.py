@@ -54,7 +54,7 @@ def limit_field(field: ti.template(), limit: ti.f32):
 @ti.kernel
 def clamp_field(field: ti.template(), low: ti.f32, high: ti.f32):
     for i, j in field:
-        field[i, j] = min(max(field[i, j], low), high)
+        field[i, j] = ti.min(ti.max(field[i, j], low), high)
 
 
 @ti.data_oriented
