@@ -30,6 +30,10 @@ class FluidSimulator:
         self._to_vorticity(self.rgb_buf, self._solver.get_fields()[0])
         return self.rgb_buf
 
+    def field_to_numpy(self):
+        fields = self._solver.get_fields()
+        return {"v": fields[0].to_numpy(), "p": fields[1].to_numpy()}
+
     @ti.kernel
     def _to_norm(self, rgb_buf: ti.template(), vc: ti.template(), pc: ti.template()):
         for i, j in rgb_buf:
@@ -88,6 +92,10 @@ class DyeFluidSimulator(FluidSimulator):
     def get_dye_field(self):
         self._to_dye(self.rgb_buf, self._solver.get_fields()[2])
         return self.rgb_buf
+
+    def field_to_numpy(self):
+        fields = self._solver.get_fields()
+        return {"v": fields[0].to_numpy(), "p": fields[1].to_numpy(), "dye": fields[2].to_numpy()}
 
     @ti.kernel
     def _to_dye(self, rgb_buf: ti.template(), dye: ti.template()):

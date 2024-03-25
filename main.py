@@ -1,6 +1,7 @@
 import argparse
 from pathlib import Path
 
+import numpy as np
 import taichi as ti
 
 from fluid_simulator import DyeFluidSimulator, FluidSimulator
@@ -70,12 +71,12 @@ def main():
     else:
         fluid_sim = DyeFluidSimulator.create(n_bc, resolution, dt, re, vor_eps, scheme)
 
-    img_path = Path(__file__).parent.resolve() / "result"
+    output_path = Path(__file__).parent.resolve() / "output"
 
     # video_manager = ti.tools.VideoManager(output_dir=str(img_path), framerate=30, automatic_build=False)
 
     n_vis = 3 if no_dye else 4
-    count = 0
+    step = 0
     ss_count = 0
     paused = False
     while window.running:
@@ -102,9 +103,13 @@ def main():
             elif e.key == "v":
                 vis_num = (vis_num + 1) % n_vis
             elif e.key == "s":
-                img_path.mkdir(exist_ok=True)
-                ti.tools.imwrite(img, str(img_path / f"{ss_count:04}.png"))
+                output_path.mkdir(exist_ok=True)
+                ti.tools.imwrite(img, str(output_path / f"{ss_count:04}.png"))
                 ss_count += 1
+            elif e.key == "d":
+                output_path.mkdir(exist_ok=True)
+                fields = fluid_sim.field_to_numpy()
+                np.savez(str(output_path / f"step_{step:06}.npz"), **fields)
 
         canvas.set_image(img)
         window.show()
@@ -112,7 +117,7 @@ def main():
         # if count % 20 == 0:
         #     video_manager.write_frame(img)
 
-        count += 1
+        step += 1
 
     # video_manager.make_video(mp4=True)
 
