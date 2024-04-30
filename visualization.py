@@ -17,8 +17,8 @@ def visualize_pressure(val):
 
 
 @ti.func
-def visualize_vorticity(v, i, j):
-    val = diff_x(v, i, j).y - diff_y(v, i, j).x
+def visualize_vorticity(v, i, j, dx):
+    val = diff_x(v, i, j, dx).y - diff_y(v, i, j, dx).x
     return ti.Vector([ti.max(val, 0.0), 0.0, ti.max(-val, 0.0)])
 
 
@@ -58,7 +58,6 @@ def visualize_xy(vec):
 
 @ti.func
 def _hsv_to_rgb(h: float, s: float, v: float):
-
     if h == 1:
         h = 0
     z = ti.floor(h * 6)

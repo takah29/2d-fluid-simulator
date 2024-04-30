@@ -2,13 +2,14 @@ from abc import ABCMeta, abstractmethod
 
 import taichi as ti
 
-from differentiation import sample, diff_x, diff_y
+from differentiation import sample
 
 
 class PressureUpdater(metaclass=ABCMeta):
-    def __init__(self, boundary_condition, dt):
+    def __init__(self, boundary_condition, dt, dx):
         self._bc = boundary_condition
         self.dt = dt
+        self.dx = dx
 
     @abstractmethod
     def update(self, p, v_current):
@@ -16,16 +17,21 @@ class PressureUpdater(metaclass=ABCMeta):
 
 
 @ti.func
-def predict_p(pc, vc, dt, i, j):
-    dx = diff_x(vc, i, j)
-    dy = diff_y(vc, i, j)
+def predict_p(pc, vc, i, j, dt, dx):
+    sub_x = sample(vc, i + 1, j) - sample(vc, i - 1, j)
+    sub_y = sample(vc, i, j + 1) - sample(vc, i, j - 1)
+
     pred_p = (
-        (sample(pc, i + 1, j) + sample(pc, i - 1, j) + sample(pc, i, j + 1) + sample(pc, i, j - 1))
-        - (dx.x + dy.y) / dt
-        + dx.x**2
-        + dy.y**2
-        + 2 * dy.x * dx.y
-    ) * 0.25
+        0.25
+        * (
+            sample(pc, i + 1, j)
+            + sample(pc, i - 1, j)
+            + sample(pc, i, j + 1)
+            + sample(pc, i, j - 1)
+        )
+        + (sub_x.x**2 + sub_y.y**2 + (sub_y.x * sub_x.y)) / 8.0
+        - dx * (sub_x.x + sub_y.y) / (8 * dt)
+    )
 
     return pred_p
 
@@ -34,8 +40,8 @@ def predict_p(pc, vc, dt, i, j):
 class JacobiPressureUpdater(PressureUpdater):
     """Jacobi Method"""
 
-    def __init__(self, boundary_condition, dt, n_iter):
-        super().__init__(boundary_condition, dt)
+    def __init__(self, boundary_condition, dt, dx, n_iter):
+        super().__init__(boundary_condition, dt, dx)
 
         self._n_iter = n_iter
 
@@ -49,15 +55,15 @@ class JacobiPressureUpdater(PressureUpdater):
     def _update(self, p_next: ti.template(), p_current: ti.template(), v_current: ti.template()):
         for i, j in p_next:
             if not self._bc.is_wall(i, j):
-                p_next[i, j] = predict_p(p_current, v_current, self.dt, i, j)
+                p_next[i, j] = predict_p(p_current, v_current, i, j, self.dt, self.dx)
 
 
 @ti.data_oriented
 class RedBlackSorPressureUpdater(PressureUpdater):
     """Red-Black SOR Method"""
 
-    def __init__(self, boundary_condition, dt, relaxation_factor, n_iter):
-        super().__init__(boundary_condition, dt)
+    def __init__(self, boundary_condition, dt, dx, relaxation_factor, n_iter):
+        super().__init__(boundary_condition, dt, dx)
 
         self._n_iter = n_iter
         self._relaxation_factor = relaxation_factor
@@ -91,5 +97,5 @@ class RedBlackSorPressureUpdater(PressureUpdater):
     @ti.func
     def _pn_ij(self, pc, vc, i, j):
         return (1.0 - self._relaxation_factor) * pc[i, j] + self._relaxation_factor * predict_p(
-            pc, vc, self.dt, i, j
+            pc, vc, i, j, self.dt, self.dx
         )

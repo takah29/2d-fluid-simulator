@@ -37,42 +37,50 @@ class FluidSimulator:
     @ti.kernel
     def _to_norm(self, rgb_buf: ti.template(), vc: ti.template(), pc: ti.template()):
         for i, j in rgb_buf:
-            rgb_buf[i, j] = 0.015 * visualize_norm(vc[i, j])
-            rgb_buf[i, j] += 0.00002 * visualize_pressure(pc[i, j])
+            rgb_buf[i, j] = 0.2 * visualize_norm(vc[i, j])
+            rgb_buf[i, j] += 0.002 * visualize_pressure(pc[i, j])
             if self._solver.is_wall(i, j):
                 rgb_buf[i, j] = self._wall_color
 
     @ti.kernel
     def _to_pressure(self, rgb_buf: ti.template(), pc: ti.template()):
         for i, j in rgb_buf:
-            rgb_buf[i, j] = 0.0002 * visualize_pressure(pc[i, j])
+            rgb_buf[i, j] = 0.04 * visualize_pressure(pc[i, j])
             if self._solver.is_wall(i, j):
                 rgb_buf[i, j] = self._wall_color
 
     @ti.kernel
     def _to_vorticity(self, rgb_buf: ti.template(), vc: ti.template()):
         for i, j in rgb_buf:
-            rgb_buf[i, j] = 0.2 * visualize_vorticity(vc, i, j)
+            rgb_buf[i, j] = 0.005 * visualize_vorticity(vc, i, j, self._solver.dx)
             if self._solver.is_wall(i, j):
                 rgb_buf[i, j] = self._wall_color
 
     @staticmethod
-    def create(num, resolution, dt, re, vor_eps, scheme):
+    def create(num, resolution, dt, dx, re, vor_eps, scheme):
         boundary_condition = get_boundary_condition(num, resolution, True)
         vorticity_confinement = (
-            VorticityConfinement(boundary_condition, dt, vor_eps) if vor_eps is not None else None
+            VorticityConfinement(boundary_condition, dt, dx, vor_eps)
+            if vor_eps is not None
+            else None
         )
         pressure_updater = RedBlackSorPressureUpdater(
-            boundary_condition, dt, relaxation_factor=1.3, n_iter=2
+            boundary_condition, dt, dx, relaxation_factor=1.3, n_iter=2
         )
 
         if scheme == "cip":
             solver = CipMacSolver(
-                boundary_condition, pressure_updater, dt, re, vorticity_confinement
+                boundary_condition, pressure_updater, dt, dx, re, vorticity_confinement
             )
         elif scheme == "upwind":
             solver = MacSolver(
-                boundary_condition, pressure_updater, advect_upwind, dt, re, vorticity_confinement
+                boundary_condition,
+                pressure_updater,
+                advect_upwind,
+                dt,
+                dx,
+                re,
+                vorticity_confinement,
             )
         elif scheme == "kk":
             solver = MacSolver(
@@ -80,6 +88,7 @@ class FluidSimulator:
                 pressure_updater,
                 advect_kk_scheme,
                 dt,
+                dx,
                 re,
                 vorticity_confinement,
             )
@@ -105,22 +114,30 @@ class DyeFluidSimulator(FluidSimulator):
                 rgb_buf[i, j] = self._wall_color
 
     @staticmethod
-    def create(num, resolution, dt, re, vor_eps, scheme):
+    def create(num, resolution, dt, dx, re, vor_eps, scheme):
         boundary_condition = get_boundary_condition(num, resolution, False)
         vorticity_confinement = (
-            VorticityConfinement(boundary_condition, dt, vor_eps) if vor_eps is not None else None
+            VorticityConfinement(boundary_condition, dt, dx, vor_eps)
+            if vor_eps is not None
+            else None
         )
         pressure_updater = RedBlackSorPressureUpdater(
-            boundary_condition, dt, relaxation_factor=1.3, n_iter=2
+            boundary_condition, dt, dx, relaxation_factor=1.3, n_iter=2
         )
 
         if scheme == "cip":
             solver = DyeCipMacSolver(
-                boundary_condition, pressure_updater, dt, re, vorticity_confinement
+                boundary_condition, pressure_updater, dt, dx, re, vorticity_confinement
             )
         elif scheme == "upwind":
             solver = DyeMacSolver(
-                boundary_condition, pressure_updater, advect_upwind, dt, re, vorticity_confinement
+                boundary_condition,
+                pressure_updater,
+                advect_upwind,
+                dt,
+                dx,
+                re,
+                vorticity_confinement,
             )
         elif scheme == "kk":
             solver = DyeMacSolver(
@@ -128,6 +145,7 @@ class DyeFluidSimulator(FluidSimulator):
                 pressure_updater,
                 advect_kk_scheme,
                 dt,
+                dx,
                 re,
                 vorticity_confinement,
             )

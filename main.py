@@ -17,9 +17,11 @@ def main():
         choices=[1, 2, 3, 4, 5, 6],
         default=1,
     )
-    parser.add_argument("-re", "--reynolds_num", help="Reynolds number", type=float, default=10.0)
+    parser.add_argument(
+        "-re", "--reynolds_num", help="Reynolds number", type=float, default=1000000.0
+    )
     parser.add_argument("-res", "--resolution", help="Resolution of y-axis", type=int, default=400)
-    parser.add_argument("-dt", "--time_step", help="Time step", type=float, default=0.01)
+    parser.add_argument("-dt", "--time_step", help="Time step", type=float, default=0.0)
     parser.add_argument(
         "-vis",
         "--visualization",
@@ -29,11 +31,11 @@ def main():
         default=0,
     )
     parser.add_argument(
-        "-vor_eps",
-        "--vorticity_confinement_eps",
-        help="Vorticity Confinement eps. 0.0 is disable.",
+        "-vc",
+        "--vorticity_confinement",
+        help="Vorticity Confinement. 0.0 is disable.",
         type=float,
-        default=4.0,
+        default=5.0,
     )
     parser.add_argument(
         "-scheme",
@@ -49,13 +51,14 @@ def main():
     args = parser.parse_args()
 
     n_bc = args.boundary_condition
-    dt = args.time_step
     re = args.reynolds_num
     resolution = args.resolution
+    dt = args.time_step if args.time_step != 0.0 else 0.05 / resolution
     vis_num = args.visualization
     no_dye = args.no_dye
     scheme = args.advection_scheme
-    vor_eps = args.vorticity_confinement_eps if args.vorticity_confinement_eps != 0.0 else None
+    vor_eps = args.vorticity_confinement if args.vorticity_confinement != 0.0 else None
+    dx = 1 / resolution
 
     if args.cpu:
         ti.init(arch=ti.cpu)
@@ -63,13 +66,18 @@ def main():
         device_memory_GB = 2.0 if resolution > 1000 else 1.0
         ti.init(arch=ti.gpu, device_memory_GB=device_memory_GB)
 
+    print(
+        f"Boundary Condition: {n_bc}\ndt: {dt}\nRe: {re}\nResolution: {resolution}\n"
+        f"Scheme: {scheme}\nVorticity confinement: {vor_eps}"
+    )
+
     window = ti.ui.Window("Fluid Simulation", (2 * resolution, resolution), vsync=False)
     canvas = window.get_canvas()
 
     if no_dye:
-        fluid_sim = FluidSimulator.create(n_bc, resolution, dt, re, vor_eps, scheme)
+        fluid_sim = FluidSimulator.create(n_bc, resolution, dt, dx, re, vor_eps, scheme)
     else:
-        fluid_sim = DyeFluidSimulator.create(n_bc, resolution, dt, re, vor_eps, scheme)
+        fluid_sim = DyeFluidSimulator.create(n_bc, resolution, dt, dx, re, vor_eps, scheme)
 
     output_path = Path(__file__).parent.resolve() / "output"
 
@@ -80,19 +88,25 @@ def main():
     ss_count = 0
     paused = False
     while window.running:
+        if step % 5 == 0:
+            if vis_num == 0:
+                img = fluid_sim.get_norm_field()
+            elif vis_num == 1:
+                img = fluid_sim.get_pressure_field()
+            elif vis_num == 2:
+                img = fluid_sim.get_vorticity_field()
+            elif vis_num == 3:
+                img = fluid_sim.get_dye_field()
+            else:
+                raise NotImplementedError()
+
+            canvas.set_image(img)
+            window.show()
+
+            # video_manager.write_frame(img)
+
         if not paused:
             fluid_sim.step()
-
-        if vis_num == 0:
-            img = fluid_sim.get_norm_field()
-        elif vis_num == 1:
-            img = fluid_sim.get_pressure_field()
-        elif vis_num == 2:
-            img = fluid_sim.get_vorticity_field()
-        elif vis_num == 3:
-            img = fluid_sim.get_dye_field()
-        else:
-            raise NotImplementedError()
 
         if window.get_event(ti.ui.PRESS):
             e = window.event
@@ -110,12 +124,6 @@ def main():
                 output_path.mkdir(exist_ok=True)
                 fields = fluid_sim.field_to_numpy()
                 np.savez(str(output_path / f"step_{step:06}.npz"), **fields)
-
-        canvas.set_image(img)
-        window.show()
-
-        # if count % 20 == 0:
-        #     video_manager.write_frame(img)
 
         step += 1
 
