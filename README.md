@@ -1,7 +1,7 @@
 # 2D Fluid Simulator
 
-![baundary_condition_2_dye](./images/bc2_res1600_re100_cip_vc4_dye.jpg)
-![baundary_condition_2_norm](./images/bc2_res1600_re100_cip_vc4_norm.jpg)
+![baundary_condition_2_dye](./images/bc2_res1600_cip_dye.jpg)
+![baundary_condition_2_norm](./images/bc2_res1600_cip_norm.jpg)
 
 ## Features
 
@@ -26,41 +26,29 @@ GeForce GTX 1080 or higher recommended.
 
 ## Usage
 
-- Boundary Condition 1, Reynolds Number = 0.2, dt = 0.01
+- Boundary Condition 1, ReynoldsNumber = 500, dt = 0.0005, VorticityConfinement is Disable
   ```bash
-  python main.py -re 0.2
+  python main.py -re 1000 -dt 0.0005 -vc 0.0
   ```
   Press `V` key switches the flow visualization method.
-- Boundary Condition 2, Reynolds Number = 100.0, resolution = 800, dt = 0.01
+  `dt` is automatically determined even if not specified, but should be small for divergence.
+- Boundary Condition 2, resolution = 800
   ```bash
-  python main.py -bc 2 -re 100 -res 800
+  python main.py -bc 2 -res 800
   ```
-- Boundary Condition 3, Reynolds Number = 100.0, resolution = 800, dt = 0.01, no vorticity confinement, upwind scheme
+  Boundary conditions can be specified from 1 to 6
+- Boundary Condition 3, ReynoldsNumber = 10^8, resolution = 800, VorticityConfinement = 10
   ```bash
-  python main.py -bc 3 -re 100 -res 800 -vor_eps 0.0 -scheme upwind
-  ```
-- Boundary Condition 3, Reynolds Number = 100.0, resolution = 800, dt = 0.01, no vorticity confinement, cip scheme
-  ```bash
-  python main.py -bc 3 -re 100 -res 800 -vor_eps 0.0
-  ```
-- Boundary Condition 5, Reynolds Number = 100.0, dt = 0.01
-  ```bash
-  python main.py -bc 5 -re 100
-  ```
-- Boundary Condition 6, Reynolds Number = 100.0, dt = 0.01
-  ```bash
-  python main.py -bc 6 -re 100
+  python main.py -bc 3 -re 100000000 -res 800 -vc 10
   ```
 - Help
   ```bash
   python main.py -h
   ```
 
-### For CPU
-
-- Boundary Condition 2, Reynolds Number = 100.0, resolution = 200, dt = 0.01
+- for CPU
   ```bash
-  python main.py -bc 2 -re 100.0 -res 200 -cpu
+  python main.py -dt 0.0005 -cpu
   ```
 
 ## Screenshots
@@ -68,24 +56,24 @@ GeForce GTX 1080 or higher recommended.
 ### Flow Visualization
 
 - Norm and Pressure
-  ![norm_and_pressure](./images/bc5_res800_re100_cip_vc4_norm.jpg)
+  ![norm_and_pressure](./images/bc5_res800_cip_norm.jpg)
 - Pressure
-  ![pressure](./images/bc5_res800_re100_cip_vc4_pressure.jpg)
+  ![pressure](./images/bc5_res800_cip_pressure.jpg)
 - Vorticity
-  ![vorticity](./images/bc5_res800_re100_cip_vc4_vorticity.jpg)
+  ![vorticity](./images/bc5_res800_cip_vorticity.jpg)
 - Dye
-  ![dye](./images/bc5_res800_re100_cip_vc4_dye.jpg)
+  ![dye](./images/bc5_res800_cip_dye.jpg)
 
 ### Vorticity Confinement
 
-- eps = 0.0
-  ![no_vorticity_confinement](./images/bc3_res800_re1000_cip_vc0_dye.jpg)
-- eps = 4.0
-  ![vorticity_confinement](./images/bc3_res800_re1000_cip_vc4_dye.jpg)
+- Disable
+  ![no_vorticity_confinement](./images/bc3_res800_cip_dye_novc.jpg)
+- Enable
+  ![vorticity_confinement](./images/bc3_res800_cip_dye_vc.jpg)
 
 ## References
 
-- [移流法](http://www.slis.tsukuba.ac.jp/~fujisawa.makoto.fu/cgi-bin/wiki/index.php?%B0%DC%CE%AE%CB%A1)
+- [移流法](https://pbcglab.jp/cgi-bin/wiki/index.php?%E7%A7%BB%E6%B5%81%E6%B3%95)
 - [2 次元 CIP 法による移流項の計算](https://i-ric.org/yasu/nbook2/04_Chapt04.html#cip)
 - [GPU Gems Chapter 38. Fast Fluid Dynamics Simulation on the GPU
   ](https://developer.nvidia.com/gpugems/gpugems/part-vi-beyond-triangles/chapter-38-fast-fluid-dynamics-simulation-gpu)
