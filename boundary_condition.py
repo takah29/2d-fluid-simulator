@@ -3,6 +3,8 @@ from pathlib import Path
 import numpy as np
 import taichi as ti
 
+from differentiation import sample
+
 
 @ti.data_oriented
 class BoundaryCondition:
@@ -13,21 +15,25 @@ class BoundaryCondition:
     def set_velocity_boundary_condition(self, vc: ti.template()):
         bc_mask = ti.static(self._bc_mask)
         for i, j in vc:
-            if bc_mask[i, j] == 1:
+            if (
+                bc_mask[i, j] == 1
+                and 1 <= i < bc_mask.shape[0] - 1
+                and 1 <= j < bc_mask.shape[1] - 1
+            ):
                 # for kk scheme
                 # 壁内部の境界条件を設定、壁の厚さは片側2ピクセル以上を仮定する
                 if bc_mask[i - 1, j] == 0 and bc_mask[i, j - 1] == 1 and bc_mask[i, j + 1] == 1:
-                    vc[i + 1, j] = -vc[i - 1, j]
+                    vc[i + 1, j] = -sample(vc, i - 1, j)
                 elif bc_mask[i + 1, j] == 0 and bc_mask[i, j - 1] == 1 and bc_mask[i, j + 1] == 1:
-                    vc[i - 1, j] = -vc[i + 1, j]
+                    vc[i - 1, j] = -sample(vc, i + 1, j)
                 elif bc_mask[i, j - 1] == 0 and bc_mask[i - 1, j] == 1 and bc_mask[i + 1, j] == 1:
-                    vc[i, j + 1] = -vc[i, j - 1]
+                    vc[i, j + 1] = -sample(vc, i, j - 1)
                 elif bc_mask[i, j + 1] == 0 and bc_mask[i - 1, j] == 1 and bc_mask[i + 1, j] == 1:
-                    vc[i, j - 1] = -vc[i, j + 1]
+                    vc[i, j - 1] = -sample(vc, i, j + 1)
             elif bc_mask[i, j] == 2:
                 vc[i, j] = self._bc_const[i, j]
             elif bc_mask[i, j] == 3:
-                vc[i, j].x = ti.max(vc[i - 1, j].x, 0.05)  # 逆流しないようにする
+                vc[i, j].x = ti.max(sample(vc, i - 1, j).x, 0.05)  # 逆流しないようにする
 
     @ti.kernel
     def set_pressure_boundary_condition(self, pc: ti.template()):
@@ -35,23 +41,23 @@ class BoundaryCondition:
         for i, j in pc:
             if bc_mask[i, j] == 1:
                 if bc_mask[i - 1, j] == 0 and bc_mask[i, j - 1] == 1 and bc_mask[i, j + 1] == 1:
-                    pc[i, j] = pc[i - 1, j]
+                    pc[i, j] = sample(pc, i - 1, j)
                 elif bc_mask[i + 1, j] == 0 and bc_mask[i, j - 1] == 1 and bc_mask[i, j + 1] == 1:
-                    pc[i, j] = pc[i + 1, j]
+                    pc[i, j] = sample(pc, i + 1, j)
                 elif bc_mask[i, j - 1] == 0 and bc_mask[i - 1, j] == 1 and bc_mask[i + 1, j] == 1:
-                    pc[i, j] = pc[i, j - 1]
+                    pc[i, j] = sample(pc, i, j - 1)
                 elif bc_mask[i, j + 1] == 0 and bc_mask[i - 1, j] == 1 and bc_mask[i + 1, j] == 1:
-                    pc[i, j] = pc[i, j + 1]
+                    pc[i, j] = sample(pc, i, j + 1)
                 elif bc_mask[i - 1, j] == 0 and bc_mask[i, j + 1] == 0:
-                    pc[i, j] = (pc[i - 1, j] + pc[i, j + 1]) / 2.0
+                    pc[i, j] = (sample(pc, i - 1, j) + sample(pc, i, j + 1)) / 2.0
                 elif bc_mask[i + 1, j] == 0 and bc_mask[i, j + 1] == 0:
-                    pc[i, j] = (pc[i + 1, j] + pc[i, j + 1]) / 2.0
+                    pc[i, j] = (sample(pc, i + 1, j) + sample(pc, i, j + 1)) / 2.0
                 elif bc_mask[i - 1, j] == 0 and bc_mask[i, j - 1] == 0:
-                    pc[i, j] = (pc[i - 1, j] + pc[i, j - 1]) / 2.0
+                    pc[i, j] = (sample(pc, i - 1, j) + sample(pc, i, j - 1)) / 2.0
                 elif bc_mask[i + 1, j] == 0 and bc_mask[i, j - 1] == 0:
-                    pc[i, j] = (pc[i + 1, j] + pc[i, j - 1]) / 2.0
+                    pc[i, j] = (sample(pc, i + 1, j) + sample(pc, i, j - 1)) / 2.0
             elif bc_mask[i, j] == 2:
-                pc[i, j] = pc[i + 1, j]
+                pc[i, j] = sample(pc, i + 1, j)
             elif bc_mask[i, j] == 3:
                 pc[i, j] = 0.0
 
