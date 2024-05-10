@@ -19,14 +19,14 @@
 
 ## Requirements
 
-- Python 3.10
-- Taichi 1.5
+- Python 3.11
+- Taichi 1.7
 
 GeForce GTX 1080 or higher recommended.
 
 ## Usage
 
-- Boundary Condition 1, ReynoldsNumber = 500, dt = 0.0005, VorticityConfinement is Disable
+- Boundary Condition 1, ReynoldsNumber = 1000, dt = 0.0005, VorticityConfinement is Disable
   ```bash
   python main.py -re 1000 -dt 0.0005 -vc 0.0
   ```
@@ -45,7 +45,6 @@ GeForce GTX 1080 or higher recommended.
   ```bash
   python main.py -h
   ```
-
 - for CPU
   ```bash
   python main.py -dt 0.0005 -cpu
