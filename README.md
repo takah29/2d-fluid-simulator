@@ -24,30 +24,38 @@
 
 GeForce GTX 1080 or higher recommended.
 
+## Setup
+
+Run the following command in an environment with the uv project management tool installed:
+
+```bash
+uv sync
+```
+
 ## Usage
 
 - Boundary Condition 1, ReynoldsNumber = 1000, dt = 0.0005, VorticityConfinement is Disable
   ```bash
-  python main.py -re 1000 -dt 0.0005 -vc 0.0
+  uv run main.py -re 1000 -dt 0.0005 -vc 0.0
   ```
   Press `V` key switches the flow visualization method.
   `dt` is automatically determined even if not specified, but should be small for divergence.
 - Boundary Condition 2, resolution = 800
   ```bash
-  python main.py -bc 2 -res 800
+  uv run main.py -bc 2 -res 800
   ```
   Boundary conditions can be specified from 1 to 6
 - Boundary Condition 3, ReynoldsNumber = 10^8, resolution = 800, VorticityConfinement = 10
   ```bash
-  python main.py -bc 3 -re 100000000 -res 800 -vc 10
+  uv run main.py -bc 3 -re 100000000 -res 800 -vc 10
   ```
 - Help
   ```bash
-  python main.py -h
+  uv run main.py -h
   ```
 - for CPU
   ```bash
-  python main.py -dt 0.0005 -cpu
+  uv run main.py -dt 0.0005 -cpu
   ```
 
 ## Screenshots
