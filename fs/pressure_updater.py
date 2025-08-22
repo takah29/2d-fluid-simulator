@@ -2,8 +2,8 @@ from abc import ABCMeta, abstractmethod
 
 import taichi as ti
 
-from boundary_condition import BoundaryCondition, DyeBoundaryCondition
-from differentiation import sample
+from fs.boundary_condition import BoundaryCondition, DyeBoundaryCondition
+from fs.differentiation import sample
 
 
 class PressureUpdater(metaclass=ABCMeta):

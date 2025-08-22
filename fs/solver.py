@@ -3,10 +3,10 @@ from collections.abc import Callable
 
 import taichi as ti
 
-from boundary_condition import BoundaryCondition, DyeBoundaryCondition
-from differentiation import diff2_x, diff2_y, diff_x, diff_y, sign
-from pressure_updater import PressureUpdater
-from vorticity_confinement import VorticityConfinement
+from fs.boundary_condition import BoundaryCondition, DyeBoundaryCondition
+from fs.differentiation import diff2_x, diff2_y, diff_x, diff_y, sign
+from fs.pressure_updater import PressureUpdater
+from fs.vorticity_confinement import VorticityConfinement
 
 VELOCITY_LIMIT = 10.0
 

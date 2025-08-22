@@ -1,12 +1,12 @@
 import numpy.typing as npt
 import taichi as ti
 
-from advection import advect_kk_scheme, advect_upwind
-from boundary_condition import get_boundary_condition
-from pressure_updater import RedBlackSorPressureUpdater
-from solver import CipMacSolver, DyeCipMacSolver, DyeMacSolver, MacSolver
-from visualization import visualize_norm, visualize_pressure, visualize_vorticity
-from vorticity_confinement import VorticityConfinement
+from fs.advection import advect_kk_scheme, advect_upwind
+from fs.boundary_condition import get_boundary_condition
+from fs.pressure_updater import RedBlackSorPressureUpdater
+from fs.solver import CipMacSolver, DyeCipMacSolver, DyeMacSolver, MacSolver
+from fs.visualization import visualize_norm, visualize_pressure, visualize_vorticity
+from fs.vorticity_confinement import VorticityConfinement
 
 
 @ti.data_oriented

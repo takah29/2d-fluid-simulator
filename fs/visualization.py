@@ -2,7 +2,7 @@ from math import e, pi
 
 import taichi as ti
 
-from differentiation import diff_x, diff_y
+from fs.differentiation import diff_x, diff_y
 
 
 @ti.func

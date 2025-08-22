@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import taichi as ti
 
-from fluid_simulator import DyeFluidSimulator, FluidSimulator
+from fs.fluid_simulator import DyeFluidSimulator, FluidSimulator
 
 
 def main() -> None:

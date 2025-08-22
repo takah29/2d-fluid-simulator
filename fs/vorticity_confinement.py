@@ -1,7 +1,7 @@
 import taichi as ti
 
-from boundary_condition import BoundaryCondition, DyeBoundaryCondition
-from differentiation import diff_x, diff_y
+from fs.boundary_condition import BoundaryCondition, DyeBoundaryCondition
+from fs.differentiation import diff_x, diff_y
 
 
 @ti.data_oriented

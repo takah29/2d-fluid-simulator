@@ -5,7 +5,7 @@ import numpy.typing as npt
 import taichi as ti
 from PIL import Image
 
-from differentiation import sample
+from fs.differentiation import sample
 
 
 @ti.data_oriented
