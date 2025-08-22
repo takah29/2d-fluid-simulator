@@ -76,10 +76,10 @@ def main() -> None:
     window = ti.ui.Window("Fluid Simulation", (2 * resolution, resolution), vsync=False)
     canvas = window.get_canvas()
 
-    if enable_dye:
-        fluid_sim = DyeFluidSimulator.create(n_bc, resolution, dt, dx, re, vor_eps, scheme)
-    else:
+    if not enable_dye:
         fluid_sim = FluidSimulator.create(n_bc, resolution, dt, dx, re, vor_eps, scheme)
+    else:
+        fluid_sim = DyeFluidSimulator.create(n_bc, resolution, dt, dx, re, vor_eps, scheme)
 
     output_path = Path(__file__).parent.resolve() / "output"
 
