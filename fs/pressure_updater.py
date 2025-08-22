@@ -4,6 +4,7 @@ import taichi as ti
 
 from fs.boundary_condition import BoundaryCondition, DyeBoundaryCondition
 from fs.differentiation import sample
+from fs.double_buffer import DoubleBuffer
 
 
 class PressureUpdater(metaclass=ABCMeta):
@@ -15,7 +16,7 @@ class PressureUpdater(metaclass=ABCMeta):
         self.dx = dx
 
     @abstractmethod
-    def update(self, p, v_current: ti.Field) -> None:
+    def update(self, p: DoubleBuffer, v_current: ti.Field) -> None:
         pass
 
 
@@ -52,7 +53,7 @@ class JacobiPressureUpdater(PressureUpdater):
 
         self._n_iter = n_iter
 
-    def update(self, p, v_current: ti.Field) -> None:
+    def update(self, p: DoubleBuffer, v_current: ti.Field) -> None:
         for _ in range(self._n_iter):
             self._bc.set_pressure_boundary_condition(p.current)
             self._update(p.next, p.current, v_current)
@@ -82,7 +83,7 @@ class RedBlackSorPressureUpdater(PressureUpdater):
         self._n_iter = n_iter
         self._relaxation_factor = relaxation_factor
 
-    def update(self, p, v_current: ti.Field) -> None:
+    def update(self, p: DoubleBuffer, v_current: ti.Field) -> None:
         for _ in range(self._n_iter):
             self._bc.set_pressure_boundary_condition(p.current)
             self._update(p.next, p.current, v_current)

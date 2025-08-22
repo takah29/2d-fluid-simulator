@@ -2,6 +2,7 @@ import taichi as ti
 
 from fs.boundary_condition import BoundaryCondition, DyeBoundaryCondition
 from fs.differentiation import diff_x, diff_y
+from fs.double_buffer import DoubleBuffer
 
 
 @ti.data_oriented
@@ -53,6 +54,6 @@ class VorticityConfinement:
         # 発散する可能性があるのでクランプする
         return ti.max(ti.min(vorticity_vec, 0.1), -0.1)
 
-    def apply(self, v) -> None:
+    def apply(self, v: DoubleBuffer) -> None:
         self._calc_vorticity(v.current)
         self._add_vorticity(v.next, v.current)  # v.nextのみ更新する

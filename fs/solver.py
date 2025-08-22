@@ -5,27 +5,11 @@ import taichi as ti
 
 from fs.boundary_condition import BoundaryCondition, DyeBoundaryCondition
 from fs.differentiation import diff2_x, diff2_y, diff_x, diff_y, sign
+from fs.double_buffer import DoubleBuffer
 from fs.pressure_updater import PressureUpdater
 from fs.vorticity_confinement import VorticityConfinement
 
 VELOCITY_LIMIT = 10.0
-
-
-class DoubleBuffers:
-    def __init__(self, resolution, n_channel: int) -> None:
-        if n_channel == 1:
-            self.current = ti.field(ti.f32, shape=resolution)
-            self.next = ti.field(ti.f32, shape=resolution)
-        else:
-            self.current = ti.Vector.field(n_channel, ti.f32, shape=resolution)
-            self.next = ti.Vector.field(n_channel, ti.f32, shape=resolution)
-
-    def swap(self) -> None:
-        self.current, self.next = self.next, self.current
-
-    def reset(self) -> None:
-        self.current.fill(0)
-        self.next.fill(0)
 
 
 @ti.data_oriented
@@ -89,8 +73,8 @@ class MacSolver(Solver):
         self.pressure_updater = pressure_updater
         self.vorticity_confinement = vorticity_confinement
 
-        self.v = DoubleBuffers(self.resolution, 2)  # velocity
-        self.p = DoubleBuffers(self.resolution, 1)  # pressure
+        self.v = DoubleBuffer(self.resolution, 2)  # velocity
+        self.p = DoubleBuffer(self.resolution, 1)  # pressure
 
     def update(self) -> None:
         self._bc.set_velocity_boundary_condition(self.v.current)
@@ -147,7 +131,7 @@ class DyeMacSolver(MacSolver):
             vorticity_confinement,
         )
 
-        self.dye = DoubleBuffers(self.resolution, 3)
+        self.dye = DoubleBuffer(self.resolution, 3)
 
     def update(self) -> None:
         self._bc.set_velocity_boundary_condition(self.v.current)
@@ -198,10 +182,10 @@ class CipMacSolver(Solver):
         self.pressure_updater = pressure_updater
         self.vorticity_confinement = vorticity_confinement
 
-        self.v = DoubleBuffers(self.resolution, 2)  # velocity
-        self.vx = DoubleBuffers(self.resolution, 2)  # velocity gradient x
-        self.vy = DoubleBuffers(self.resolution, 2)  # velocity gradient y
-        self.p = DoubleBuffers(self.resolution, 1)  # pressure
+        self.v = DoubleBuffer(self.resolution, 2)  # velocity
+        self.vx = DoubleBuffer(self.resolution, 2)  # velocity gradient x
+        self.vy = DoubleBuffer(self.resolution, 2)  # velocity gradient y
+        self.p = DoubleBuffer(self.resolution, 1)  # pressure
 
         self._set_grad(self.vx.current, self.vy.current, self.v.current)
 
@@ -227,7 +211,7 @@ class CipMacSolver(Solver):
             fy[i, j] = diff_y(f, i, j, self.dx)
 
     def _update_velocities(
-        self, v: DoubleBuffers, vx: DoubleBuffers, vy: DoubleBuffers, p: DoubleBuffers
+        self, v: DoubleBuffer, vx: DoubleBuffer, vy: DoubleBuffer, p: DoubleBuffer
     ) -> None:
         self._non_advection_phase(v.next, v.current, p.current)
         self._non_advection_phase_grad(vx.next, vy.next, vx.current, vy.current, v.current, v.next)
@@ -361,9 +345,9 @@ class DyeCipMacSolver(CipMacSolver):
     ) -> None:
         super().__init__(boundary_condition, pressure_updater, dt, dx, re, vorticity_confinement)
 
-        self.dye = DoubleBuffers(boundary_condition.get_resolution(), 3)  # dye
-        self.dyex = DoubleBuffers(boundary_condition.get_resolution(), 3)  # dye gradient x
-        self.dyey = DoubleBuffers(boundary_condition.get_resolution(), 3)  # dye gradient y
+        self.dye = DoubleBuffer(boundary_condition.get_resolution(), 3)  # dye
+        self.dyex = DoubleBuffer(boundary_condition.get_resolution(), 3)  # dye gradient x
+        self.dyey = DoubleBuffer(boundary_condition.get_resolution(), 3)  # dye gradient y
         self._set_grad(self.dyex.current, self.dyey.current, self.dye.current)
 
     def update(self) -> None:
@@ -399,7 +383,7 @@ class DyeCipMacSolver(CipMacSolver):
                 dn[i, j] = dc[i, j] + self._calc_diffusion(dc, i, j) * self.dt
 
     def _update_dye(
-        self, dye: DoubleBuffers, dyex: DoubleBuffers, dyey: DoubleBuffers, v: DoubleBuffers
+        self, dye: DoubleBuffer, dyex: DoubleBuffer, dyey: DoubleBuffer, v: DoubleBuffer
     ) -> None:
         self._non_advection_phase_dye(dye.next, dye.current)
         self._non_advection_phase_grad(

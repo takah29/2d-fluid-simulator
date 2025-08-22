@@ -72,7 +72,7 @@ class BoundaryCondition:
     def is_fluid_domain(self, i: int, j: int) -> bool:
         return self._bc_mask[i, j] == 0
 
-    def get_resolution(self) -> int:
+    def get_resolution(self) -> tuple[int, int]:
         return self._bc_const.shape[:2]
 
     @staticmethod
