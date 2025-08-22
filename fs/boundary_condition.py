@@ -350,7 +350,8 @@ def create_boundary_condition3(
 
         # 円柱ランダム生成
         ref_resolution = 500
-        points = np.random.default_rng(123).uniform(0, x_res, (100, 2))
+        np.random.seed(123)  # noqa: NPY002
+        points = np.random.uniform(0, x_res, (100, 2))  # noqa: NPY002
         points = points[points[:, 1] < y_res]
         r = 16 * (y_res / ref_resolution)
         for p in points:
