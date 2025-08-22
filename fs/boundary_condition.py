@@ -508,7 +508,7 @@ def create_boundary_condition6(
         set_plane(bc, bc_mask, bc_dye, (0, 0), (x_res, 2))  # 下
         set_plane(bc, bc_mask, bc_dye, (0, y_res - 2), (x_res, y_res))  # 上
 
-        basepath = Path(__file__).resolve().parent
+        basepath = Path(__file__).parents[1].resolve()
         filepath = basepath / "images/bc_mask/dragon.png"
         set_obstacle_fromfile(bc, bc_mask, bc_dye, filepath)
 
