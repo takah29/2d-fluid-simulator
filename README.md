@@ -17,13 +17,6 @@
   - Dye
 - Vorticity Confinement
 
-## Requirements
-
-- Python 3.11
-- Taichi 1.7
-
-GeForce GTX 1080 or higher recommended.
-
 ## Setup
 
 Run the following command in an environment with the uv project management tool installed:
@@ -31,6 +24,8 @@ Run the following command in an environment with the uv project management tool 
 ```bash
 uv sync
 ```
+
+GeForce GTX 1080 or higher recommended.
 
 ## Usage
 
