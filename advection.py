@@ -4,14 +4,14 @@ from differentiation import diff_x, diff_y, fdiff_x, fdiff_y, sample
 
 
 @ti.func
-def advect(vc, phi, i, j, dx):
-    """Central Differencing"""
+def advect(vc: ti.template(), phi: ti.template(), i: int, j: int, dx: float) -> float:  # type: ignore[valid-type]
+    """Central Differencing."""
     return vc[i, j].x * diff_x(phi, i, j, dx) + vc[i, j].y * diff_y(phi, i, j, dx)
 
 
 @ti.func
-def advect_upwind(vc, phi, i, j, dx):
-    """Upwind differencing
+def advect_upwind(vc: ti.template(), phi: ti.template(), i: int, j: int, dx: float) -> float:  # type: ignore[valid-type]
+    """Upwind differencing.
 
     http://www.slis.tsukuba.ac.jp/~fujisawa.makoto.fu/cgi-bin/wiki/index.php?%B0%DC%CE%AE%CB%A1#tac8e468
     """
@@ -25,19 +25,15 @@ def advect_upwind(vc, phi, i, j, dx):
 
 
 @ti.func
-def advect_kk_scheme(vc, phi, i, j, dx):
-    """Kawamura-Kuwabara Scheme
+def advect_kk_scheme(vc: ti.template(), phi: ti.template(), i: int, j: int, dx: float) -> float:  # type: ignore[valid-type]
+    """Kawamura-Kuwabara Scheme.
 
     http://www.slis.tsukuba.ac.jp/~fujisawa.makoto.fu/cgi-bin/wiki/index.php?%B0%DC%CE%AE%CB%A1#y2dbc484
     """
     coef = [-2, 10, -9, 2, -1]
     v = ti.Vector([0.0, 0.0, 0.0, 0.0, 0.0])
 
-    if vc[i, j].x < 0:
-        v = ti.Vector(coef)
-    else:
-        v = -ti.Vector(coef[::-1])
-
+    v = ti.Vector(coef) if vc[i, j].x < 0 else -ti.Vector(coef[::-1])
     mx = ti.Matrix.cols(
         [
             sample(phi, i + 2, j),
@@ -49,11 +45,7 @@ def advect_kk_scheme(vc, phi, i, j, dx):
     )
     a = mx @ v / (6 * dx)
 
-    if vc[i, j].y < 0:
-        v = ti.Vector(coef)
-    else:
-        v = -ti.Vector(coef[::-1])
-
+    v = ti.Vector(coef) if vc[i, j].y < 0 else -ti.Vector(coef[::-1])
     my = ti.Matrix.cols(
         [
             sample(phi, i, j + 2),

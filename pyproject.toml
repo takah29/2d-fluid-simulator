@@ -8,3 +8,40 @@ dependencies = ["numpy>=2.2.6", "pillow>=11.2.1", "taichi>=1.7.4"]
 
 [dependency-groups]
 dev = ["isort>=6.0.1", "mypy>=1.17.1", "ruff>=0.12.10"]
+
+[tool.ruff]
+exclude = [".mypy_cache", ".venv"]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "C901",
+    "PLR0912",
+    "PLR0915",
+    "D103",
+    "D100",
+    "PLR2004",
+    "T201",
+    "COM812",
+    "D101",
+    "D107",
+    "D102",
+    "PLR0913",
+]
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 100
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.pyright]
+include = ["."]
+pythonVersion = "3.13"
+typeCheckingMode = "standard"
+# reportPrivateImportUsage = false
+# reportAttributeAccessIssue = false
+
+[tool.mypy]
+disable_error_code = ["import-untyped"]

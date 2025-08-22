@@ -1,4 +1,4 @@
-from math import pi, e
+from math import e, pi
 
 import taichi as ti
 
@@ -6,31 +6,31 @@ from differentiation import diff_x, diff_y
 
 
 @ti.func
-def visualize_norm(vec):
+def visualize_norm(vec: ti.template()) -> ti.Vector:  # type: ignore[valid-type]
     c = vec.norm()
     return ti.Vector([c, c, c])
 
 
 @ti.func
-def visualize_pressure(val):
+def visualize_pressure(val: float) -> ti.Vector:
     return ti.Vector([ti.max(val, 0.0), 0.0, ti.max(-val, 0.0)])
 
 
 @ti.func
-def visualize_vorticity(v, i, j, dx):
-    val = diff_x(v, i, j, dx).y - diff_y(v, i, j, dx).x
+def visualize_vorticity(v: ti.template(), i: int, j: int, dx: float) -> ti.Vector:  # type: ignore[valid-type]
+    val = diff_x(v, i, j, dx).y - diff_y(v, i, j, dx).x  # type: ignore[reportAttributeAccessIssue]
     return ti.Vector([ti.max(val, 0.0), 0.0, ti.max(-val, 0.0)])
 
 
 @ti.func
-def visualize_hue(vec):
+def visualize_hue(vec: ti.template()) -> ti.Vector:  # type: ignore[valid-type]
     h = ti.atan2(vec.y, vec.x)
 
     while h < 0:
         h += 2 * pi
     h /= 2 * pi
 
-    m = ti.sqrt(vec.x**2 + vec.y**2)
+    m = ti.sqrt(vec.x**2 + vec.y**2)  # type: ignore[arg-type]
     ranges = 0.0
     rangee = 10.0
 
@@ -52,12 +52,12 @@ def visualize_hue(vec):
 
 
 @ti.func
-def visualize_xy(vec):
+def visualize_xy(vec: ti.template()) -> ti.Vector:  # type: ignore[valid-type]
     return ti.Vector([vec.y, 0.0, vec.x])
 
 
 @ti.func
-def _hsv_to_rgb(h: float, s: float, v: float):
+def _hsv_to_rgb(h: float, s: float, v: float) -> ti.Vector:
     if h == 1:
         h = 0
     z = ti.floor(h * 6)

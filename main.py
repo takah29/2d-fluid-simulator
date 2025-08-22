@@ -7,7 +7,7 @@ import taichi as ti
 from fluid_simulator import DyeFluidSimulator, FluidSimulator
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Fluid Simulator")
     parser.add_argument(
         "-bc",
@@ -50,21 +50,23 @@ def main():
 
     args = parser.parse_args()
 
-    n_bc = args.boundary_condition
-    re = args.reynolds_num
-    resolution = args.resolution
-    dt = args.time_step if args.time_step != 0.0 else 0.05 / resolution
-    vis_num = args.visualization
-    no_dye = args.no_dye
-    scheme = args.advection_scheme
-    vor_eps = args.vorticity_confinement if args.vorticity_confinement != 0.0 else None
-    dx = 1 / resolution
+    n_bc: int = args.boundary_condition
+    re: float = args.reynolds_num
+    resolution: int = args.resolution
+    dt: float = args.time_step if args.time_step != 0.0 else 0.05 / resolution
+    vis_num: int = args.visualization
+    no_dye: bool = args.no_dye
+    scheme: str = args.advection_scheme
+    vor_eps: float | None = (
+        args.vorticity_confinement if args.vorticity_confinement != 0.0 else None
+    )
+    dx: float = 1 / resolution
 
     if args.cpu:
         ti.init(arch=ti.cpu)
     else:
-        device_memory_GB = 2.0 if resolution > 1000 else 1.0
-        ti.init(arch=ti.gpu, device_memory_GB=device_memory_GB)
+        device_memory_gb = 2.0 if resolution > 1000 else 1.0
+        ti.init(arch=ti.gpu, device_memory_GB=device_memory_gb)
 
     print(
         f"Boundary Condition: {n_bc}\ndt: {dt}\nRe: {re}\nResolution: {resolution}\n"
@@ -87,6 +89,7 @@ def main():
     step = 0
     ss_count = 0
     paused = False
+    img = None
     while window.running:
         if step % 5 == 0:
             if vis_num == 0:
@@ -96,9 +99,9 @@ def main():
             elif vis_num == 2:
                 img = fluid_sim.get_vorticity_field()
             elif vis_num == 3:
-                img = fluid_sim.get_dye_field()
+                img = fluid_sim.get_dye_field()  # type: ignore[attr-defined]
             else:
-                raise NotImplementedError()
+                raise NotImplementedError
 
             canvas.set_image(img)
             window.show()
@@ -110,15 +113,18 @@ def main():
 
         if window.get_event(ti.ui.PRESS):
             e = window.event
+
             if e.key == ti.ui.ESCAPE:
                 break
-            elif e.key == "p":
+
+            if e.key == "p":
                 paused = not paused
             elif e.key == "v":
                 vis_num = (vis_num + 1) % n_vis
             elif e.key == "s":
                 output_path.mkdir(exist_ok=True)
-                ti.tools.imwrite(img, str(output_path / f"{ss_count:04}.png"))
+                if img is not None:
+                    ti.tools.imwrite(img, str(output_path / f"{ss_count:04}.png"))
                 ss_count += 1
             elif e.key == "d":
                 output_path.mkdir(exist_ok=True)
