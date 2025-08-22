@@ -199,20 +199,20 @@ def set_obstacle_fromfile(
 
 
 def get_boundary_condition(
-    num: int, resolution: int, *, no_dye: bool
+    num: int, resolution: int, *, enable_dye: bool
 ) -> BoundaryCondition | DyeBoundaryCondition:
     if num == 1:
-        boundary_condition = create_boundary_condition1(resolution, no_dye=no_dye)
+        boundary_condition = create_boundary_condition1(resolution, enable_dye=enable_dye)
     elif num == 2:
-        boundary_condition = create_boundary_condition2(resolution, no_dye=no_dye)
+        boundary_condition = create_boundary_condition2(resolution, enable_dye=enable_dye)
     elif num == 3:
-        boundary_condition = create_boundary_condition3(resolution, no_dye=no_dye)
+        boundary_condition = create_boundary_condition3(resolution, enable_dye=enable_dye)
     elif num == 4:
-        boundary_condition = create_boundary_condition4(resolution, no_dye=no_dye)
+        boundary_condition = create_boundary_condition4(resolution, enable_dye=enable_dye)
     elif num == 5:
-        boundary_condition = create_boundary_condition5(resolution, no_dye=no_dye)
+        boundary_condition = create_boundary_condition5(resolution, enable_dye=enable_dye)
     elif num == 6:
-        boundary_condition = create_boundary_condition6(resolution, no_dye=no_dye)
+        boundary_condition = create_boundary_condition6(resolution, enable_dye=enable_dye)
     else:
         raise NotImplementedError
 
@@ -220,7 +220,7 @@ def get_boundary_condition(
 
 
 def create_boundary_condition1(
-    resolution: int, *, no_dye: bool
+    resolution: int, *, enable_dye: bool
 ) -> BoundaryCondition | DyeBoundaryCondition:
     # 1: 壁, 2: 流入部, 3: 流出部
     x_res, y_res = 2 * resolution, resolution
@@ -257,7 +257,7 @@ def create_boundary_condition1(
     set_outflow()
     set_wall()
 
-    if no_dye:
+    if not enable_dye:
         boundary_condition = BoundaryCondition(bc, bc_mask)
     else:
         boundary_condition = DyeBoundaryCondition(bc, bc_dye, bc_mask)
@@ -266,7 +266,7 @@ def create_boundary_condition1(
 
 
 def create_boundary_condition2(
-    resolution: int, *, no_dye: bool
+    resolution: int, *, enable_dye: bool
 ) -> BoundaryCondition | DyeBoundaryCondition:
     # 1: 壁, 2: 流入部, 3: 流出部
     x_res, y_res = 2 * resolution, resolution
@@ -311,7 +311,7 @@ def create_boundary_condition2(
     set_wall()
     set_outflow()
 
-    if no_dye:
+    if not enable_dye:
         boundary_condition = BoundaryCondition(bc, bc_mask)
     else:
         boundary_condition = DyeBoundaryCondition(bc, bc_dye, bc_mask)
@@ -320,7 +320,7 @@ def create_boundary_condition2(
 
 
 def create_boundary_condition3(
-    resolution: int, *, no_dye: bool
+    resolution: int, *, enable_dye: bool
 ) -> BoundaryCondition | DyeBoundaryCondition:
     # 1: 壁, 2: 流入部, 3: 流出部
     x_res, y_res = 2 * resolution, resolution
@@ -360,7 +360,7 @@ def create_boundary_condition3(
     set_outflow()
     set_wall()
 
-    if no_dye:
+    if not enable_dye:
         boundary_condition = BoundaryCondition(bc, bc_mask)
     else:
         boundary_condition = DyeBoundaryCondition(bc, bc_dye, bc_mask)
@@ -369,7 +369,7 @@ def create_boundary_condition3(
 
 
 def create_boundary_condition4(
-    resolution: int, *, no_dye: bool
+    resolution: int, *, enable_dye: bool
 ) -> BoundaryCondition | DyeBoundaryCondition:
     # 1: 壁, 2: 流入部, 3: 流出部
     x_res, y_res = 2 * resolution, resolution
@@ -409,7 +409,7 @@ def create_boundary_condition4(
     set_inflow()
     set_outflow()
 
-    if no_dye:
+    if not enable_dye:
         boundary_condition = BoundaryCondition(bc, bc_mask)
     else:
         boundary_condition = DyeBoundaryCondition(bc, bc_dye, bc_mask)
@@ -418,7 +418,7 @@ def create_boundary_condition4(
 
 
 def create_boundary_condition5(
-    resolution: int, *, no_dye: bool
+    resolution: int, *, enable_dye: bool
 ) -> BoundaryCondition | DyeBoundaryCondition:
     # 1: 壁, 2: 流入部, 3: 流出部
     x_res, y_res = 2 * resolution, resolution
@@ -470,7 +470,7 @@ def create_boundary_condition5(
     set_outflow()
     set_wall()
 
-    if no_dye:
+    if not enable_dye:
         boundary_condition = BoundaryCondition(bc, bc_mask)
     else:
         boundary_condition = DyeBoundaryCondition(bc, bc_dye, bc_mask)
@@ -479,7 +479,7 @@ def create_boundary_condition5(
 
 
 def create_boundary_condition6(
-    resolution: int, *, no_dye: bool
+    resolution: int, *, enable_dye: bool
 ) -> BoundaryCondition | DyeBoundaryCondition:
     # 1: 壁, 2: 流入部, 3: 流出部
     x_res, y_res = 2 * resolution, resolution
@@ -515,7 +515,7 @@ def create_boundary_condition6(
     set_outflow()
     set_wall()
 
-    if no_dye:
+    if not enable_dye:
         boundary_condition = BoundaryCondition(bc, bc_mask)
     else:
         boundary_condition = DyeBoundaryCondition(bc, bc_dye, bc_mask)

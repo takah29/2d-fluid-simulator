@@ -55,7 +55,7 @@ def main() -> None:
     resolution: int = args.resolution
     dt: float = args.time_step if args.time_step != 0.0 else 0.05 / resolution
     vis_num: int = args.visualization
-    no_dye: bool = args.no_dye
+    enable_dye: bool = not args.no_dye
     scheme: str = args.advection_scheme
     vor_eps: float | None = (
         args.vorticity_confinement if args.vorticity_confinement != 0.0 else None
@@ -76,16 +76,16 @@ def main() -> None:
     window = ti.ui.Window("Fluid Simulation", (2 * resolution, resolution), vsync=False)
     canvas = window.get_canvas()
 
-    if no_dye:
-        fluid_sim = FluidSimulator.create(n_bc, resolution, dt, dx, re, vor_eps, scheme)
-    else:
+    if enable_dye:
         fluid_sim = DyeFluidSimulator.create(n_bc, resolution, dt, dx, re, vor_eps, scheme)
+    else:
+        fluid_sim = FluidSimulator.create(n_bc, resolution, dt, dx, re, vor_eps, scheme)
 
     output_path = Path(__file__).parent.resolve() / "output"
 
     # video_manager = ti.tools.VideoManager(output_dir=str(img_path), framerate=30, automatic_build=False)
 
-    n_vis = 3 if no_dye else 4
+    n_vis = 4 if enable_dye else 3
     step = 0
     ss_count = 0
     paused = False

@@ -67,7 +67,7 @@ class FluidSimulator:
         vor_eps: float | None,
         scheme: str,
     ) -> "FluidSimulator":
-        boundary_condition = get_boundary_condition(num, resolution, no_dye=True)
+        boundary_condition = get_boundary_condition(num, resolution, enable_dye=False)
         vorticity_confinement = (
             VorticityConfinement(boundary_condition, dt, dx, vor_eps)
             if vor_eps is not None
@@ -135,7 +135,7 @@ class DyeFluidSimulator(FluidSimulator):
         vor_eps: float | None,
         scheme: str,
     ) -> "DyeFluidSimulator":
-        boundary_condition = get_boundary_condition(num, resolution, no_dye=False)
+        boundary_condition = get_boundary_condition(num, resolution, enable_dye=True)
         vorticity_confinement = (
             VorticityConfinement(boundary_condition, dt, dx, vor_eps)
             if vor_eps is not None
